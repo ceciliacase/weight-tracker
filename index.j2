@@ -81,43 +81,44 @@ Footer
       }
     });
   }));
-  // Insert edit fields in the table
+
+	// Insert edit fields into the row to be edited
   $('tbody').on('click', '.editRowButton',(function() {
     thisRow = $(this).parent().parent();
     thisRowId = thisRow.attr('rowid');
-    // Replace Text with form fields
-
-
+    // Replace text with form fields
     thisRow.replaceWith(function(){
       var fillData = [
         thisRow.children(".id").html(),
         thisRow.children(".date").html(),
         thisRow.children(".dateSubmitted").html(),
         thisRow.children(".weight").html()];
+			alert(fillData);
       return "<tr rowid='" + fillData[0] + "' class='weightrow'><td class='id' origVal='" + fillData[0] + "'>"
-        + fillData[0] + "</td><td><input type='date' id='editDate' origVal='" + fillData[1] + "' value='"
+        + fillData[0] + "</td><td class='date' origVal='" + fillData[1] + "'><input type='date' id='editDate' value='"
         + fillData[1] + "'></td><td class='dateSubmitted' origVal='" + fillData[2] + "'>"
-        + fillData[2] + "</td><td><input type='number' id='editWeight' origVal='" + fillData[3] + "' value='"
+        + fillData[2] + "</td><td class='weight' origVal='" + fillData[3] + "'><input type='number' id='editWeight' value='"
         + fillData[3] + "'></td><td><button class='cancelEditRowButton'>Cancel</button><button class='saveRowButton'>Save</button></td></tr>"
     });
   }));
 
   // Save the edited fields
+	$('tbody').on('click','.saveRowButton',(function(){
+		
+	});
 
-  // Cancel the edit fields and return to the original values
+	// Cancel the edit fields and return to the original values
   $('tbody').on('click', '.cancelEditRowButton',(function() {
     thisRow = $(this).parent().parent();
     thisRowId = thisRow.attr('rowid');
-    // Replace Text with form fields
-    alert(thisRow.children("td#editWeight").attr("id"));
-
+	  
+    // Replace form fields with text
     thisRow.replaceWith(function(){
       var fillData = [
         thisRow.children(".id").attr("origVal"),
-        thisRow.children("td #editDate").attr("origVal"),
+        thisRow.children(".date").attr("origVal"),
         thisRow.children(".dateSubmitted").attr("origVal"),
-        thisRow.children("td#editWeight").attr("origVal")];
-      alert(fillData);
+        thisRow.children(".weight").attr("origVal")];
       return "<tr rowid='" + fillData[0] + "' class='weightrow'><td class='id'>"
           + fillData[0] + "</td><td class='date'>"
           + fillData[1] + "</td><td class='dateSubmitted'>"
