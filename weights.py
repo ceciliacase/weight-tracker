@@ -4,7 +4,7 @@ from flask import Flask, request, jsonify
 from jinja2 import Environment, PackageLoader, Template
 env = Environment(loader=PackageLoader('weights','./'))
 
-template = env.get_template('index.j2')
+template = env.get_template('index.html')
 
 app = Flask(__name__)
 
@@ -60,7 +60,7 @@ def weights():
 			c.execute('''UPDATE weights SET rowid=?, date=?, dateSubmitted=?, weight=? WHERE rowid=?''',(weightdata[0], weightdata[1], weightdata[2], weightdata[3], weightdata[0]))
 			db.commit()
 			print 'End of edit loop'
-			returnValue = jsonify(result=weightData[0])
+			returnValue = jsonify(result=weightdata)
 
 		else:
 			# Add weight data row
@@ -81,4 +81,4 @@ def weights():
 
 
 if __name__ == '__main__':
-	app.run(host='0.0.0.0')
+	app.run(host='0.0.0.0', port='8080')
