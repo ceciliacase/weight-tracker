@@ -113,7 +113,30 @@ Footer
 			thisRow.children(".id").html(),
 			thisRow.children().children("#editDate").val(),
 			thisRow.children().children("#editWeight").val()];
-		alert(newData);
+/* 		alert(newData); */
+		// Send the new data to the server
+		$.ajax({url:'/weights',
+ 			type:'POST',
+ 			dataType: 'json',
+			success: function(resultdata) {
+				// Edit the row on the client
+				thisRow.replaceWith(function() {
+					return "<tr rowid='" + resultdata.result[0] + "' class='weightrow'><td class='id'>"
+							+ resultdata.result[0] + "</td><td class='date'>"
+							+ resultdata.result[1] + "</td><td class='dateSubmitted'>"
+							+ resultdata.result[2] + "</td><td class='weight'>"
+							+ resultdata.result[3] + "</td><td class='buttons'><button class='deleteRowButton'>Delete</button>"
+							+ "<button class='editRowButton'>Edit</button></td></tr>" 
+				});
+			},
+ 			data: {
+				// Pass the data and rowid to update the record on the server
+				editthis: newData[0],
+				date: newData[1],
+				weight: newData[2]
+			}
+    });
+		
 	}));
 
 	// Cancel the edit fields and return to the original values

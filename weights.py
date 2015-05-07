@@ -30,36 +30,50 @@ db.commit()
 
 @app.route('/')
 def index():
-  c.execute('''SELECT rowid,* FROM weights''')
-  weights = c.fetchall()
-  return template.render(weights=weights)
+	c.execute('''SELECT rowid,* FROM weights''')
+	weights = c.fetchall()
+	return template.render(weights=weights)
 
 @app.route('/weights', methods=['POST','GET'])
 def weights():
-  error = None
-  todaysDate = time.strftime("%Y-%m-%d")
-  if request.method == 'POST':
-    # print request.form['weight']
-    # print request.form['date']
-    if 'deletethis' in request.form:
-      # do delete stuffs
-      rowIdToDelete = request.form['deletethis']
-      print rowIdToDelete
-      c.execute('''DELETE FROM weights WHERE rowid=?''',(rowIdToDelete,))
-      # c.execute('''DELETE FROM weights WHERE rowid=11''')
-      db.commit()
-      returnValue = jsonify(result=rowIdToDelete)
-    else:
-      weightdata = request.form['date'],todaysDate,request.form['weight']
-      # print weightdata
-      c.execute('''INSERT INTO weights (date,dateSubmitted,weight) VALUES (?, ?, ?)''',(weightdata[0],weightdata[1],weightdata[2]))
-      db.commit()
-      c.execute('''SELECT rowid,* FROM weights ORDER BY rowid DESC LIMIT 1''')
-      fetchLastRow = c.fetchall()
-      returnValue = jsonify(result=fetchLastRow[0])
-  else:
-  	error = 'Invalid'
-  return returnValue
+	error = None
+	todaysDate = time.strftime("%Y-%m-%d")
+	if request.method == 'POST':
+		# print request.form['weight']
+		# print request.form['date']
+		if 'deletethis' in request.form:
+			# do delete stuffs
+			rowIdToDelete = request.form['deletethis']
+			print rowIdToDelete
+			c.execute('''DELETE FROM weights WHERE rowid=?''',(rowIdToDelete,))
+			# c.execute('''DELETE FROM weights WHERE rowid=11''')
+			db.commit()
+			returnValue = jsonify(result=rowIdToDelete)
+		elif 'editthis' in request.form:
+			# do edit stuffs
+			weightdata = request.form['editthis'], request.form['date'], todaysDate,request.form['weight']
+			rowIdToEdit = request.form['editthis']
+			print weightdata
+			print rowIdToEdit
+			# Try to update the current record, then if it doesn't exist, insert it
+# 			c.execute('''UPDATE weights SET (date,dateSubmitted,weight) VALUES (?, ?, ?) WHERE rowid=?''',(weightdata[1], weightdata[2], weightdata[3]),(weightdata[0]))
+			c.execute('''UPDATE weights SET rowid=?, date=?, dateSubmitted=?, weight=? WHERE rowid=?''',(weightdata[0], weightdata[1], weightdata[2], weightdata[3], weightdata[0]))
+			db.commit()
+			print 'End of edit loop'
+			returnValue = jsonify(result=weightData[0])
+
+		else:
+			# Add weight data row
+			weightdata = request.form['date'],todaysDate,request.form['weight']
+			# print weightdata
+			c.execute('''INSERT INTO weights (date,dateSubmitted,weight) VALUES (?, ?, ?)''',(weightdata[0],weightdata[1],weightdata[2]))
+			db.commit()
+			c.execute('''SELECT rowid,* FROM weights ORDER BY rowid DESC LIMIT 1''')
+			fetchLastRow = c.fetchall()
+			returnValue = jsonify(result=fetchLastRow[0])
+	else:
+		error = 'Invalid'
+	return returnValue
 
 
 
@@ -67,4 +81,4 @@ def weights():
 
 
 if __name__ == '__main__':
-  app.run(host='0.0.0.0')
+	app.run(host='0.0.0.0')
