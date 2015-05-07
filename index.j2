@@ -93,19 +93,28 @@ Footer
         thisRow.children(".date").html(),
         thisRow.children(".dateSubmitted").html(),
         thisRow.children(".weight").html()];
-			alert(fillData);
+/* 			alert(fillData); */
       return "<tr rowid='" + fillData[0] + "' class='weightrow'><td class='id' origVal='" + fillData[0] + "'>"
         + fillData[0] + "</td><td class='date' origVal='" + fillData[1] + "'><input type='date' id='editDate' value='"
         + fillData[1] + "'></td><td class='dateSubmitted' origVal='" + fillData[2] + "'>"
         + fillData[2] + "</td><td class='weight' origVal='" + fillData[3] + "'><input type='number' id='editWeight' value='"
-        + fillData[3] + "'></td><td><button class='cancelEditRowButton'>Cancel</button><button class='saveRowButton'>Save</button></td></tr>"
+        + fillData[3] + "'></td><td><button class='cancelEditRowButton'>Cancel</button>"
+			  + "<button class='saveRowButton'>Save</button></td></tr>"
     });
   }));
 
   // Save the edited fields
 	$('tbody').on('click','.saveRowButton',(function(){
+/*     alert('1'); */
+		thisRow = $(this).parent().parent();
+    thisRowId = thisRow.attr('rowid');
 		
-	});
+		var newData = [
+			thisRow.children(".id").html(),
+			thisRow.children().children("#editDate").val(),
+			thisRow.children().children("#editWeight").val()];
+		alert(newData);
+	}));
 
 	// Cancel the edit fields and return to the original values
   $('tbody').on('click', '.cancelEditRowButton',(function() {
@@ -122,8 +131,9 @@ Footer
       return "<tr rowid='" + fillData[0] + "' class='weightrow'><td class='id'>"
           + fillData[0] + "</td><td class='date'>"
           + fillData[1] + "</td><td class='dateSubmitted'>"
-          + fillData[2] + "</td><td class=weight'>"
-          + fillData[3] + "</td><td class='buttons'><button class='deleteRowButton'>Delete</button><button class='editRowButton'>Edit</button></td></tr>" 
+          + fillData[2] + "</td><td class='weight'>"
+          + fillData[3] + "</td><td class='buttons'><button class='deleteRowButton'>Delete</button>"
+				  + "<button class='editRowButton'>Edit</button></td></tr>" 
     });
   }));
 
