@@ -12,7 +12,7 @@ db = sqlite3.connect('weights.sqlite3')
 c  = db.cursor()
 
 # Create the database if it doesn't exist
-c.execute('''CREATE TABLE IF NOT EXISTS weights (date text, dateSubmitted text, weight real)''')
+c.execute('''CREATE TABLE IF NOT EXISTS weights (date text unique, dateSubmitted text, weight real)''')
 db.commit()
 
 # Add dummy lines to the database
@@ -41,36 +41,37 @@ def weights():
 	if request.method == 'POST':
 		# print request.form['weight']
 		# print request.form['date']
-		if 'deletethis' in request.form:
-			# do delete stuffs
-			rowIdToDelete = request.form['deletethis']
+		if 'deleterow' in request.form:
+			# Delete the row in the database
+			rowIdToDelete = request.form['deleterow']
 			print rowIdToDelete
 			c.execute('''DELETE FROM weights WHERE rowid=?''',(rowIdToDelete,))
 			# c.execute('''DELETE FROM weights WHERE rowid=11''')
 			db.commit()
 			returnValue = jsonify(result=rowIdToDelete)
-		elif 'editthis' in request.form:
-			# do edit stuffs
-			weightdata = request.form['editthis'], request.form['date'], todaysDate,request.form['weight']
-			rowIdToEdit = request.form['editthis']
-			print weightdata
-			print rowIdToEdit
-			# Try to update the current record, then if it doesn't exist, insert it
-# 			c.execute('''UPDATE weights SET (date,dateSubmitted,weight) VALUES (?, ?, ?) WHERE rowid=?''',(weightdata[1], weightdata[2], weightdata[3]),(weightdata[0]))
+		elif 'editrow' in request.form:
+			# Edit the row in the database
+			weightdata = request.form['editrow'], request.form['date'], todaysDate,request.form['weight']
+			rowIdToEdit = request.form['editrow']
+			# Update the current record
 			c.execute('''UPDATE weights SET rowid=?, date=?, dateSubmitted=?, weight=? WHERE rowid=?''',(weightdata[0], weightdata[1], weightdata[2], weightdata[3], weightdata[0]))
 			db.commit()
-			print 'End of edit loop'
 			returnValue = jsonify(result=weightdata)
 
-		else:
-			# Add weight data row
+		elif 'addrow' in request.form:
+			# Add weight data row, or update it if the date selected already has a match in the database
 			weightdata = request.form['date'],todaysDate,request.form['weight']
-			# print weightdata
-			c.execute('''INSERT INTO weights (date,dateSubmitted,weight) VALUES (?, ?, ?)''',(weightdata[0],weightdata[1],weightdata[2]))
+
+			# Try to update a row if the data already esists, and if it doesn't exist, insert it
+			c.execute('''UPDATE OR IGNORE weights SET date=?, dateSubmitted=?, weight=? WHERE date=?''',(weightdata[0], weightdata[1],weightdata[2],weightdata[0]))
+			c.execute('''INSERT OR IGNORE INTO weights (date,dateSubmitted,weight) VALUES (?, ?, ?)''',(weightdata[0],weightdata[1],weightdata[2]))
 			db.commit()
-			c.execute('''SELECT rowid,* FROM weights ORDER BY rowid DESC LIMIT 1''')
+			c.execute('''SELECT rowid,* FROM weights WHERE date=?''',(weightdata[0],))
+
 			fetchLastRow = c.fetchall()
 			returnValue = jsonify(result=fetchLastRow[0])
+		else:
+			pass
 	else:
 		error = 'Invalid'
 	return returnValue

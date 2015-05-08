@@ -1,0 +1,195 @@
+<html>
+<head>
+<link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.7/css/jquery.dataTables.css">
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+<script src="https://cdn.datatables.net/1.10.7/js/jquery.dataTables.min.js"></script>
+</head>
+
+<body>
+This the static stuff up front<br>
+And there's nav<br>
+
+<h2>Enter your weight:</h2>
+Date:
+<input type='date' id='newDate' value='2015-04-13'>
+Weight:
+<input type='number' id='newWeight' value='210'>
+<button id='addWeightButton' value='Add Weight'>Add</button>
+
+
+<h2>Here's the data:</h2>
+<table id='weighttable' class="display" cellspacing="0" width="100%">
+<tr>
+  <th>id</th>
+  <th>Date</th>
+  <th>DateSub</th>
+  <th>Weight</th>
+  <th></th>
+</tr>
+{% for weight in weights %}
+<tr rowid={{weight.0}} class='weightrow'>
+  <td class='id'>{{weight.0}}</td>
+  <td class='date'>{{weight.1}}</td>
+  <td class='dateSubmitted'>{{weight.2}}</td>
+  <td class='weight'>{{weight.3}}</td>
+  <td class='buttons'><button class='deleteRowButton'>Delete</button>
+    <button class='editRowButton'>Edit</button></td>
+</tr>{% endfor %}
+</table>
+
+<br>
+And the chart here
+
+Footer
+<script>
+// Add DataTable
+// $('#weighttable').DataTable( {
+//   // "ajax": '/weights',
+//   // "paging":   false,
+//   // "ordering": true,
+//   // "info":     false,
+//   "order": [ 1, "asc" ]
+//   } );
+
+// Add or update a weight to the table
+$('#addWeightButton').click(function(){
+
+  $.ajax({url:'/weights',
+    type:'POST',
+    dataType: 'json',
+    success: function( resultdata ) {
+      // Check if the row already exists
+      var checkRow = $('tr[rowid=' + JSON.stringify(resultdata.result[0]) + ']')
+      if ( checkRow.length ) {
+        // alert('yes');
+				checkRow.replaceWith(function() {
+					return "<tr rowid='" + resultdata.result[0] + "' class='weightrow'><td class='id'>"
+							+ resultdata.result[0] + "</td><td class='date'>"
+							+ resultdata.result[1] + "</td><td class='dateSubmitted'>"
+							+ resultdata.result[2] + "</td><td class='weight'>"
+							+ resultdata.result[3] + "</td><td class='buttons'><button class='deleteRowButton'>Delete</button>"
+							+ "<button class='editRowButton'>Edit</button></td></tr>" 
+				});
+      } else {
+        // alert('no');
+        // Add the row on the client
+        $("#weighttable").append(
+          "<tr rowid='" + resultdata.result[0] + "' class='weightrow'><td class='id'>"
+          + resultdata.result[0] + "</td><td class='date'>"
+          + resultdata.result[1] + "</td><td class='dateSubmitted'>"
+          + resultdata.result[2] + "</td><td class=weight'>"
+          + resultdata.result[3] + "</td><td class='buttons'><button class='deleteRowButton'>Delete</button><button class='editRowButton'>Edit</button></td></tr>" )
+        // alert(JSON.stringify(resultdata));
+      }
+
+    },
+    data: {
+      // Pass the data to add the row on the server
+      addrow: 'yes',
+      weight: $('#newWeight').val(),
+      date: $('#newDate').val() 
+    }
+   });
+});
+
+// Delete a weight from the table
+$('tbody').on('click', '.deleteRowButton',(function() {
+  var thisRow = $(this).parent().parent();
+  var thisRowId = thisRow.attr('rowid');
+  // alert(thisRowId);
+  $.ajax({url:'/weights',
+    type:'POST',
+    dataType: 'json',
+    success: function(result) {
+      // Delete the row on the client
+      thisRow.remove()
+    },
+    data: {
+      // Pass the row id to delete on the server
+      deleterow: thisRowId
+    }
+  });
+}));
+
+// Insert edit fields into the row to be edited
+$('tbody').on('click', '.editRowButton',(function() {
+  var thisRow = $(this).parent().parent();
+  var thisRowId = thisRow.attr('rowid');
+  // Replace text with form fields
+  thisRow.replaceWith(function(){
+    var fillData = [
+      thisRow.children(".id").html(),
+      thisRow.children(".date").html(),
+      thisRow.children(".dateSubmitted").html(),
+      thisRow.children(".weight").html()];
+/* 			alert(fillData); */
+    return "<tr rowid='" + fillData[0] + "' class='weightrow'><td class='id' origVal='" + fillData[0] + "'>"
+      + fillData[0] + "</td><td class='date' origVal='" + fillData[1] + "'><input type='date' id='editDate' value='"
+      + fillData[1] + "'></td><td class='dateSubmitted' origVal='" + fillData[2] + "'>"
+      + fillData[2] + "</td><td class='weight' origVal='" + fillData[3] + "'><input type='number' id='editWeight' value='"
+      + fillData[3] + "'></td><td><button class='cancelEditRowButton'>Cancel</button>"
+		  + "<button class='saveRowButton'>Save</button></td></tr>"
+  });
+}));
+
+// Save the edited fields
+$('tbody').on('click','.saveRowButton',(function(){
+/*     alert('1'); */
+	var thisRow = $(this).parent().parent();
+  var thisRowId = thisRow.attr('rowid');
+	
+	var newData = [
+		thisRow.children(".id").html(),
+		thisRow.children().children("#editDate").val(),
+		thisRow.children().children("#editWeight").val()];
+/* 		alert(newData); */
+	// Send the new data to the server
+	$.ajax({url:'/weights',
+ 		type:'POST',
+ 		dataType: 'json',
+		success: function(resultdata) {
+			// Edit the row on the client
+			thisRow.replaceWith(function() {
+				return "<tr rowid='" + resultdata.result[0] + "' class='weightrow'><td class='id'>"
+						+ resultdata.result[0] + "</td><td class='date'>"
+						+ resultdata.result[1] + "</td><td class='dateSubmitted'>"
+						+ resultdata.result[2] + "</td><td class='weight'>"
+						+ resultdata.result[3] + "</td><td class='buttons'><button class='deleteRowButton'>Delete</button>"
+						+ "<button class='editRowButton'>Edit</button></td></tr>" 
+			});
+		},
+ 		data: {
+			// Pass the data and rowid to update the record on the server
+			editrow: newData[0],
+			date: newData[1],
+			weight: newData[2]
+		}
+  });
+	
+}));
+
+// Cancel the edit fields and return to the original values
+$('tbody').on('click', '.cancelEditRowButton',(function() {
+  var thisRow = $(this).parent().parent();
+  var thisRowId = thisRow.attr('rowid');
+  
+  // Replace form fields with text
+  thisRow.replaceWith(function(){
+    var fillData = [
+      thisRow.children(".id").attr("origVal"),
+      thisRow.children(".date").attr("origVal"),
+      thisRow.children(".dateSubmitted").attr("origVal"),
+      thisRow.children(".weight").attr("origVal")];
+    return "<tr rowid='" + fillData[0] + "' class='weightrow'><td class='id'>"
+        + fillData[0] + "</td><td class='date'>"
+        + fillData[1] + "</td><td class='dateSubmitted'>"
+        + fillData[2] + "</td><td class='weight'>"
+        + fillData[3] + "</td><td class='buttons'><button class='deleteRowButton'>Delete</button>"
+			  + "<button class='editRowButton'>Edit</button></td></tr>" 
+  });
+}));
+
+</script>
+</body>
+</html>
