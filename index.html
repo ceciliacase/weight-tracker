@@ -12,30 +12,30 @@ And there's nav<br>
 
 <h2>Enter your weight:</h2>
 Date:
-<input type='date' id='newDate' value='2015-04-13'>
+<input type='date' id='newDate' value={{currentdate}}>
 Weight:
-<input type='number' id='newWeight' value='210'>
+<input type='number' id='newWeight' value={{latestweight.0}}>
 <button id='addWeightButton' value='Add Weight'>Add</button>
 
 
 <h2>Here's the data:</h2>
 <table id='weighttable' class="display" cellspacing="0" width="100%">
-<tr>
-  <th>id</th>
-  <th>Date</th>
-  <th>DateSub</th>
-  <th>Weight</th>
-  <th></th>
-</tr>
-{% for weight in weights %}
-<tr rowid={{weight.0}} class='weightrow'>
-  <td class='id'>{{weight.0}}</td>
-  <td class='date'>{{weight.1}}</td>
-  <td class='dateSubmitted'>{{weight.2}}</td>
-  <td class='weight'>{{weight.3}}</td>
-  <td class='buttons'><button class='deleteRowButton'>Delete</button>
-    <button class='editRowButton'>Edit</button></td>
-</tr>{% endfor %}
+  <thead>
+  <tr>
+    <th>id</th>
+    <th>Date</th>
+    <th>DateSub</th>
+    <th>Weight</th>
+  </tr>
+  </thead>
+	<tfoot>
+	<tr>
+    <th>id</th>
+    <th>Date</th>
+    <th>DateSub</th>
+    <th>Weight</th>
+	</tr>
+</tfoot>
 </table>
 
 <br>
@@ -43,18 +43,34 @@ And the chart here
 
 Footer
 <script>
-// Add DataTable
-// $('#weighttable').DataTable( {
-//   // "ajax": '/weights',
-//   // "paging":   false,
-//   // "ordering": true,
-//   // "info":     false,
-//   "order": [ 1, "asc" ]
-//   } );
+// Fill the initial table with the weight information
+$.ajax({url:'/weights',
+  type:'GET',
+  dataType:'json',
+  success: function (resultdata) {
+    var weights = resultdata.weights;
+    // alert(JSON.stringify(resultdata));
+    // alert(JSON.stringify(weights));
+    // Add DataTable
+    $('#weighttable').DataTable({
+      data: weights
+      // "columns": [
+      //   { "data": "id" },
+      //   { "data": "date" },
+      //   { "data": "dateSubmitted" },
+      //   { "data": "weight" }],
+      // "paging":   false,
+      // "ordering": true,
+      // "info":     false,
+      // "order": [ 1, "asc" ]
+    });    
+  }
+});
+
+
 
 // Add or update a weight to the table
 $('#addWeightButton').click(function(){
-
   $.ajax({url:'/weights',
     type:'POST',
     dataType: 'json',
@@ -79,7 +95,7 @@ $('#addWeightButton').click(function(){
           + resultdata.result[0] + "</td><td class='date'>"
           + resultdata.result[1] + "</td><td class='dateSubmitted'>"
           + resultdata.result[2] + "</td><td class=weight'>"
-          + resultdata.result[3] + "</td><td class='buttons'><button class='deleteRowButton'>Delete</button><button class='editRowButton'>Edit</button></td></tr>" )
+          + resultdata.result[3] + "</td><td class='buttons'><button class='deleteRowButton'>Delete</button><button class='editRowButton'>Edit</button></td></tr>" );
         // alert(JSON.stringify(resultdata));
       }
 
@@ -103,7 +119,7 @@ $('tbody').on('click', '.deleteRowButton',(function() {
     dataType: 'json',
     success: function(result) {
       // Delete the row on the client
-      thisRow.remove()
+      thisRow.remove();
     },
     data: {
       // Pass the row id to delete on the server

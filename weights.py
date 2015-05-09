@@ -27,12 +27,14 @@ db.commit()
 #             'add':    add_function
 #             'update': update_function}
 
-
 @app.route('/')
 def index():
-	c.execute('''SELECT rowid,* FROM weights''')
-	weights = c.fetchall()
-	return template.render(weights=weights)
+	# c.execute('''SELECT rowid,* FROM weights''')
+	# weights = c.fetchall()
+	c.execute('''SELECT weight FROM weights ORDER BY date desc limit 1''')
+	latestweight = c.fetchall()
+	return template.render(currentdate=time.strftime("%Y-%m-%d"),latestweight = latestweight[0])
+
 
 @app.route('/weights', methods=['POST','GET'])
 def weights():
@@ -73,7 +75,11 @@ def weights():
 		else:
 			pass
 	else:
-		error = 'Invalid'
+		# Fetch the inital table to put into DataTables
+		c.execute('''SELECT rowid,* FROM weights''')
+		weights = c.fetchall()
+		print 'Inital table fetched'
+		return jsonify(weights=weights)
 	return returnValue
 
 
