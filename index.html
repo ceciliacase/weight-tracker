@@ -7,7 +7,44 @@
 <script src="https://cdn.datatables.net/tabletools/2.2.4/js/dataTables.tableTools.min.js"></script>
 
 <style>
-  .highlight {color:red;}
+.highlight {color:red;}
+
+/* Make an input blend into its parent */
+/* http://www.monkeyandcrow.com/blog/simple_inline_edit_with_css/ */
+input.inline-edit{
+  /* Eliminate borders and padding */
+  border: none;
+  padding: 0;
+  margin: 0;
+
+  /* Inherit the parent element's typography */
+  font: inherit;
+  color: inherit;
+  line-height: inherit;
+  font-size: inherit;
+  text-align: inherit;
+
+  /* Seems to help alignment in headers */
+  vertical-align: top;
+}
+
+/* Add interaction cues on hover and focus */
+input.inline-edit:hover,
+input.inline-edit:focus{
+  /* Change the background to a light yellow */
+  background-color: #FFD;
+
+  /* A subtle transition never hurts */
+  -webkit-transition: background-color 0.5s;
+     -moz-transition: background-color 0.5s;
+      -ie-transition: background-color 0.5s;
+          transition: background-color 0.5s;
+}
+
+/* Start the save button as hidden */
+.saveRowButton {
+  visibility: hidden;
+} 
 </style>
 </head>
 
@@ -42,6 +79,14 @@ And the chart here
 
 Footer
 <script>
+// When an input field has focus, make the save button appear
+// TODO: Make sure last value is put back in the field if they cancel out of the field
+$('body').on('focus', 'tr', function(){
+    $(this).children(":last").children(".saveRowButton").css('visibility','visible');
+  }).on('blur', 'tr', function(){
+    $(this).children(":last").children(".saveRowButton").css('visibility','hidden');
+  });
+
 // Fill the initial table with the weight information
 $.ajax({url:'/weights',
   type:'GET',
@@ -61,13 +106,23 @@ $.ajax({url:'/weights',
         "visible": false,
         "searchable": false
       },{
+        "targets": [1],
+        "render": function (data, type, row) {
+          return "<input type='date' class='inline-edit date' value='" + data + "'>";
+        }
+      },{
         "targets": [2],
         "visible": false,
         "searchable": false
       },{
+        "targets":[3],
+        "render": function (data, type, row) {
+          return "<input type='number' class='inline-edit weight' value='" + data + "'>";
+        }
+      },{
         "targets": -1,
         "data": null,
-        "defaultContent": "<button class='editRowButton'>Edit</button><button class='deleteRowButton'>Delete</button>"
+        "defaultContent": "<button class='saveRowButton'>Save</button><button class='deleteRowButton'>Delete</button>"
       }]
     });    
   }
@@ -83,7 +138,7 @@ $('#addWeightButton').click(function(){
       // Check if the row already exists
       // alert(resultdata.result[1]);
       var matchingValue = $('td').filter(function(index){
-        return $(this).text()===resultdata.result[1];
+        return $(this).children().val()===resultdata.result[1];
       });
       // TODO: Add an animation to the edited row to draw the eye
       matchingValue.parent().addClass("highlight");
@@ -126,80 +181,31 @@ $('body').on('click', '.deleteRowButton', (function() {
   });
 }));
 
-// Insert edit fields into the row to be edited
-$('body').on('click', '.editRowButton',(function() {
-  console.log('edit!');
-  var thisRow = $(this).parent().parent();
-  // Replace text with form fields
-  thisRow.replaceWith(function(){
-    var fillData = [
-      thisRow.children(".id").html(),
-      thisRow.children(".date").html(),
-      thisRow.children(".dateSubmitted").html(),
-      thisRow.children(".weight").html()];
-/* 			alert(fillData); */
-    return "<tr rowid='" + fillData[0] + "' class='weightrow'><td class='id' origVal='" + fillData[0] + "'>"
-      + fillData[0] + "</td><td class='date' origVal='" + fillData[1] + "'><input type='date' id='editDate' value='"
-      + fillData[1] + "'></td><td class='dateSubmitted' origVal='" + fillData[2] + "'>"
-      + fillData[2] + "</td><td class='weight' origVal='" + fillData[3] + "'><input type='number' id='editWeight' value='"
-      + fillData[3] + "'></td><td><button class='cancelEditRowButton'>Cancel</button>"
-		  + "<button class='saveRowButton'>Save</button></td></tr>";
-  });
-}));
-
 // Save the edited fields
 $('body').on('click','.saveRowButton',(function(){
-/*     alert('1'); */
-	var thisRow = $(this).parent().parent();
-
+  var table = $('#weighttable').DataTable();
+  var thisRow = $(this).parents('tr');
+  var thisRowId = table.cell(thisRow, 0).data();
+  console.log(thisRowId);
 	var newData = [
-		thisRow.children(".id").html(),
-		thisRow.children().children("#editDate").val(),
-		thisRow.children().children("#editWeight").val()];
-/* 		alert(newData); */
+		thisRowId,
+		thisRow.children().children('.date').val(),
+		thisRow.children().children('.weight').val()];
+  console.log(newData);
 	// Send the new data to the server
 	$.ajax({url:'/weights',
  		type:'POST',
  		dataType: 'json',
 		success: function(resultdata) {
-			// Edit the row on the client
-			thisRow.replaceWith(function() {
-				return "<tr rowid='" + resultdata.result[0] + "' class='weightrow'><td class='id'>"
-						+ resultdata.result[0] + "</td><td class='date'>"
-						+ resultdata.result[1] + "</td><td class='dateSubmitted'>"
-						+ resultdata.result[2] + "</td><td class='weight'>"
-						+ resultdata.result[3] + "</td><td class='buttons'><button class='deleteRowButton'>Delete</button>"
-						+ "<button class='editRowButton'>Edit</button></td></tr>";
-			});
 		},
  		data: {
-			// Pass the data and rowid to update the record on the server
+			// Pass the rowid and data to update the record on the server
 			editrow: newData[0],
 			date: newData[1],
 			weight: newData[2]
 		}
   });
 	
-}));
-
-// Cancel the edit fields and return to the original values
-$('body').on('click', '.cancelEditRowButton',(function() {
-  var thisRow = $(this).parent().parent();
-
-  // Replace form fields with text
-  thisRow.replaceWith(function(){
-    var fillData = [
-      thisRow.children(".id").attr("origVal"),
-      thisRow.children(".date").attr("origVal"),
-      thisRow.children(".dateSubmitted").attr("origVal"),
-      thisRow.children(".weight").attr("origVal")];
-    return "<tr rowid='" + fillData[0] + "' class='weightrow'><td class='id'>"
-        + fillData[0] + "</td><td class='date'>"
-        + fillData[1] + "</td><td class='dateSubmitted'>"
-        + fillData[2] + "</td><td class='weight'>"
-        + fillData[3] + "</td><td class='buttons'><button class='deleteRowButton'>Delete</button>"
-			  + "<button class='editRowButton'>Edit</button></td></tr>";
-  });
 }));
 
 

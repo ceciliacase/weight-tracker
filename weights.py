@@ -18,7 +18,11 @@ c.execute('''CREATE TABLE IF NOT EXISTS weights (date text unique, dateSubmitted
 # TODO: Remove this code when file upload works
 todaysDate = time.strftime("%Y-%m-%d")
 for x in range(0,11):
-	c.execute('''INSERT OR IGNORE INTO weights VALUES(?, ?, ?)''',(('2015-05-'+ str(x+1)),todaysDate,200.0))
+	if x<9:
+		dateVal = '0'+str(x+1)
+	else:
+		dateVal = str(x+1)
+	c.execute('''INSERT OR IGNORE INTO weights VALUES(?, ?, ?)''',(('2015-05-'+ dateVal),todaysDate,200.0))
 
 # # Delete all rows
 #c.execute('''DELETE from weights''')
