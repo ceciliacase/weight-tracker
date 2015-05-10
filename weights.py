@@ -13,10 +13,12 @@ c  = db.cursor()
 
 # Create the database if it doesn't exist
 c.execute('''CREATE TABLE IF NOT EXISTS weights (date text unique, dateSubmitted text, weight real)''')
-db.commit()
 
 # Add dummy lines to the database
-# c.execute('''INSERT INTO weights VALUES('2015-04-30','2015-04-30',185.6)''')
+# TODO: Remove this code when file upload works
+todaysDate = time.strftime("%Y-%m-%d")
+for x in range(0,11):
+	c.execute('''INSERT OR IGNORE INTO weights VALUES(?, ?, ?)''',(('2015-5-'+ str(x+1)),todaysDate,200.0))
 
 # # Delete all rows
 #c.execute('''DELETE from weights''')
@@ -29,11 +31,11 @@ db.commit()
 
 @app.route('/')
 def index():
-	# c.execute('''SELECT rowid,* FROM weights''')
-	# weights = c.fetchall()
 	c.execute('''SELECT weight FROM weights ORDER BY date desc limit 1''')
+	print('before fetchall')
 	latestweight = c.fetchall()
-	return template.render(currentdate=time.strftime("%Y-%m-%d"),latestweight = latestweight[0])
+	print('Send index to template')
+	return template.render(currentdate=time.strftime("%Y-%m-%d"),latestweight = latestweight)
 
 
 @app.route('/weights', methods=['POST','GET'])
@@ -41,8 +43,6 @@ def weights():
 	error = None
 	todaysDate = time.strftime("%Y-%m-%d")
 	if request.method == 'POST':
-		# print request.form['weight']
-		# print request.form['date']
 		if 'deleterow' in request.form:
 			# Delete the row in the database
 			rowIdToDelete = request.form['deleterow']
@@ -76,6 +76,7 @@ def weights():
 			pass
 	else:
 		# Fetch the inital table to put into DataTables
+		print('Fetch inital table')
 		c.execute('''SELECT rowid,* FROM weights''')
 		weights = c.fetchall()
 		print 'Inital table fetched'
