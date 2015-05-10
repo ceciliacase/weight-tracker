@@ -5,6 +5,10 @@
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
 <script src="https://cdn.datatables.net/1.10.7/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/tabletools/2.2.4/js/dataTables.tableTools.min.js"></script>
+
+<style>
+  .highlight {color:red;}
+</style>
 </head>
 
 <body>
@@ -38,7 +42,6 @@ And the chart here
 
 Footer
 <script>
-
 // Fill the initial table with the weight information
 $.ajax({url:'/weights',
   type:'GET',
@@ -72,21 +75,28 @@ $.ajax({url:'/weights',
 
 // Add or update a weight to the table
 $('#addWeightButton').click(function(){
+  var table = $('#weighttable').DataTable();
   $.ajax({url:'/weights',
     type:'POST',
     dataType: 'json',
     success: function( resultdata ) {
       // Check if the row already exists
-      var checkRow = $('tr[rowid=' + JSON.stringify(resultdata.result[0]) + ']');
-      if ( checkRow.length ) {
-        // alert('Row exists');
-
+      // alert(resultdata.result[1]);
+      var matchingValue = $('td').filter(function(index){
+        return $(this).text()===resultdata.result[1];
+      });
+      // TODO: Add an animation to the edited row to draw the eye
+      matchingValue.parent().addClass("highlight");
+      if(matchingValue.length){
+        // console.log('matchingValue exists');
+        table.row(matchingValue.parent())
+          .data([resultdata.result[0],resultdata.result[1],resultdata.result[2],resultdata.result[3]])
+          .draw();
       } else {
-        // alert('Row does not yet exist');
-        // Add the row on the client
-
+        table.row.add([resultdata.result[0],resultdata.result[1],resultdata.result[2],resultdata.result[3]])
+          .draw().node();
+        // console.log('matchingValue does not exist');
       }
-
     },
     data: {
       // Pass the data to add the row on the server
@@ -118,7 +128,7 @@ $('body').on('click', '.deleteRowButton', (function() {
 
 // Insert edit fields into the row to be edited
 $('body').on('click', '.editRowButton',(function() {
-  alert('edit!');
+  console.log('edit!');
   var thisRow = $(this).parent().parent();
   // Replace text with form fields
   thisRow.replaceWith(function(){
@@ -191,6 +201,7 @@ $('body').on('click', '.cancelEditRowButton',(function() {
 			  + "<button class='editRowButton'>Edit</button></td></tr>";
   });
 }));
+
 
 </script>
 </body>

@@ -18,7 +18,7 @@ c.execute('''CREATE TABLE IF NOT EXISTS weights (date text unique, dateSubmitted
 # TODO: Remove this code when file upload works
 todaysDate = time.strftime("%Y-%m-%d")
 for x in range(0,11):
-	c.execute('''INSERT OR IGNORE INTO weights VALUES(?, ?, ?)''',(('2015-5-'+ str(x+1)),todaysDate,200.0))
+	c.execute('''INSERT OR IGNORE INTO weights VALUES(?, ?, ?)''',(('2015-05-'+ str(x+1)),todaysDate,200.0))
 
 # # Delete all rows
 #c.execute('''DELETE from weights''')
@@ -35,7 +35,7 @@ def index():
 	print('before fetchall')
 	latestweight = c.fetchall()
 	print('Send index to template')
-	return template.render(currentdate=time.strftime("%Y-%m-%d"),latestweight = latestweight)
+	return template.render(currentdate=time.strftime("%Y-%m-%d"),latestweight = latestweight[0])
 
 
 @app.route('/weights', methods=['POST','GET'])
