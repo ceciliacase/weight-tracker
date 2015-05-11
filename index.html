@@ -26,7 +26,6 @@ Weight:
 
 
 <h2>Here's the data:</h2>
-<!--TODO: Change the language for when the table is empty-->
 <table id='weighttable' class="display" cellspacing="0" width="400px">
   <thead>
   <tr>
@@ -92,6 +91,9 @@ $.ajax({url:'/weights',
       "info":     false,
       "ordering": true,
       "order": [ 1, 'desc' ],
+      "language": {
+        "emptyTable": "You haven't started tracking your weight. Enter today's weigh-in above!"
+      },
       "columnDefs": [{
         "targets": [0],
         "visible": false,
