@@ -1,56 +1,21 @@
 <html>
 <head>
 <link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.7/css/jquery.dataTables.css">
+<link rel="stylesheet" type="text/css" href="{{url_for('static',filename='style.css')}}">
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
 <script src="https://cdn.datatables.net/1.10.7/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/tabletools/2.2.4/js/dataTables.tableTools.min.js"></script>
+<script src="{{url_for('static',filename='dropzone.js')}}"></script>
 
-<style>
-.highlight {color:red;}
-
-/* Make an input blend into its parent */
-/* http://www.monkeyandcrow.com/blog/simple_inline_edit_with_css/ */
-input.inline-edit{
-  /* Eliminate borders and padding */
-  border: none;
-  padding: 0;
-  margin: 0;
-
-  /* Inherit the parent element's typography */
-  font: inherit;
-  color: inherit;
-  line-height: inherit;
-  font-size: inherit;
-  text-align: inherit;
-
-  /* Seems to help alignment in headers */
-  vertical-align: top;
-}
-
-/* Add interaction cues on hover and focus */
-input.inline-edit:hover,
-input.inline-edit:focus{
-  /* Change the background to a light yellow */
-  background-color: #FFD;
-
-  /* A subtle transition never hurts */
-  -webkit-transition: background-color 0.5s;
-     -moz-transition: background-color 0.5s;
-      -ie-transition: background-color 0.5s;
-          transition: background-color 0.5s;
-}
-
-/* Start the save button as hidden */
-.saveRowButton {
-  visibility: hidden;
-} 
-</style>
 </head>
 
 <body>
 This the static stuff up front<br>
 And there's nav<br>
+
+<h2>File Upload:</h2>
+<form action="/upload" class="dropzone"></form>
 
 <h2>Enter your weight:</h2>
 Date:
@@ -61,7 +26,7 @@ Weight:
 
 
 <h2>Here's the data:</h2>
-<!--TODO: Design the state for when the table is empty-->
+<!--TODO: Change the language for when the table is empty-->
 <table id='weighttable' class="display" cellspacing="0" width="400px">
   <thead>
   <tr>
@@ -75,10 +40,17 @@ Weight:
 </table>
 
 <br>
+
+<h2>Import weight data:</h2>
+<!--<form id="fileForm" method="post" enctype="multipart/form-data">-->
+<!--  <input type="file" name="file"><br /><br />-->
+<!--  <input type="submit" value="Upload">-->
+<!--</form><br>-->
 And the chart here
 
 Footer
 <script>
+
 // When an input field has focus, make the save button appear
 // TODO: Make sure last value is put back in the field if they cancel out of the field
 $('body').on('focus', 'tr', function(){
@@ -86,6 +58,25 @@ $('body').on('focus', 'tr', function(){
   }).on('blur', 'tr', function(){
     $(this).children(":last").children(".saveRowButton").css('visibility','hidden');
   });
+
+// Submit an excel file
+$('#fileForm').submit(function() {
+  var data = new FormData(this); // <-- 'this' is your form element
+  $.ajax({
+    url: '/upload',
+    type: 'POST',
+    data: data,
+    cache: false,
+    contentType: false,
+    processData: false,
+    type: 'POST',     
+    success: function(data){
+      // Redraw the table
+      var table = $('#weighttable').DataTable();
+      table.draw();
+    }
+  });
+});
 
 // Fill the initial table with the weight information
 $.ajax({url:'/weights',
@@ -98,18 +89,13 @@ $.ajax({url:'/weights',
     $('#weighttable').DataTable({
       data: weights,
       "paging":   false,
-      // "ordering": false,
       "info":     false,
-      "order": [ 1, "desc" ],
+      "ordering": true,
+      "order": [ 1, 'desc' ],
       "columnDefs": [{
         "targets": [0],
         "visible": false,
         "searchable": false
-      },{
-        "targets": [1],
-        "render": function (data, type, row) {
-          return "<input type='date' class='inline-edit date' value='" + data + "'>";
-        }
       },{
         "targets": [2],
         "visible": false,
@@ -149,7 +135,8 @@ $('#addWeightButton').click(function(){
           .draw();
       } else {
         table.row.add([resultdata.result[0],resultdata.result[1],resultdata.result[2],resultdata.result[3]])
-          .draw().node();
+          .invalidate().draw().node()
+          .draw();
         // console.log('matchingValue does not exist');
       }
     },
@@ -188,8 +175,8 @@ $('body').on('click','.saveRowButton',(function(){
   var thisRowId = table.cell(thisRow, 0).data();
   console.log(thisRowId);
 	var newData = [
-		thisRowId,
-		thisRow.children().children('.date').val(),
+		table.cell(thisRow, 0).data(),
+		table.cell(thisRow, 1).data(),
 		thisRow.children().children('.weight').val()];
   console.log(newData);
 	// Send the new data to the server
