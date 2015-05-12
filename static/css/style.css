@@ -1,0 +1,77 @@
+/* style.css */
+/* TODO: Get a proper css reset */
+html, body{
+  height:100%;
+  width:100%;
+  margin: 0;
+  padding: 0;
+}
+
+h2 {
+  font-size:15px;
+}
+
+.highlight {color:red;}
+
+/* Start the save button as hidden */
+.saveRowButton {
+  visibility: hidden;
+} 
+
+/* weighttable styling */
+#weighttable {
+  border-spacing: 0px;
+  border-collapse: collapse;
+}
+
+#weighttable td {
+  padding: 5px;
+}
+
+
+/* Layout styling */
+header {
+  abackground-color:blue;
+  height:50px;
+}
+nav {
+  background-color:red;
+  height:20px;
+}
+#main {
+  abackground-color:teal;
+  position:absolute;
+  top:70px;
+  bottom:0px;right:0px;left:0px;
+  display: flex;
+  flex-flow: row;
+}
+#chart {
+  abackground-color:orange;
+  flex: 1 100%;
+}
+#sidebar {
+  abackground-color:yellow;
+  width:500px;
+  flex: none;
+  display:flex;
+  flex-flow:column;
+}
+#addweight {
+  background-color:lightgrey;
+  flex:none;
+  height:100px;
+}
+#weightlist {
+  abackground-color:green;
+  flex:1 100%;
+  overflow-y:scroll;
+  overflow-x:hidden;
+
+}
+#uploadform {
+  abackground-color:blue;
+  flex:none;
+  height:150px;
+  overflow:hidden;
+}

@@ -1,53 +1,60 @@
+<!doctype html>
 <html>
 <head>
+<!--TODO: Create title-->
+<title>Title goes here</title>
+
 <link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.7/css/jquery.dataTables.css">
-<link rel="stylesheet" type="text/css" href="{{url_for('static',filename='style.css')}}">
+<link rel="stylesheet" type="text/css" href="{{url_for('static',filename='css/style.css')}}">
+<link rel="stylesheet" type="text/css" href="{{url_for('static',filename='css/dropzone.css')}}">
+<link rel="stylesheet" type="text/css" href="{{url_for('static',filename='css/inline-edit.css')}}">
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
 <script src="https://cdn.datatables.net/1.10.7/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/tabletools/2.2.4/js/dataTables.tableTools.min.js"></script>
-<script src="{{url_for('static',filename='dropzone.js')}}"></script>
+<script src="{{url_for('static',filename='js/dropzone.js')}}"></script>
 
 </head>
 
 <body>
-This the static stuff up front<br>
-And there's nav<br>
+<header>
+  HEADER
+</header>
+<nav>
+  NAVIGATION
+</nav>
 
-<h2>File Upload:</h2>
-<form action="/upload" class="dropzone"></form>
+<section id="main">
+  <section id="chart">And the chart here</section>
+  
+  <section id="sidebar">
+    <section id="addweight">
+      <h2>Add your weight:</h2>
+      Date:
+      <input type='date' id='newDate' value={{currentdate}}>
+      Weight:
+      <input type='number' id='newWeight' value={{latestweight.0}}>
+      <button id='addWeightButton' value='Add Weight'>Add</button>
+    </section>
 
-<h2>Enter your weight:</h2>
-Date:
-<input type='date' id='newDate' value={{currentdate}}>
-Weight:
-<input type='number' id='newWeight' value={{latestweight.0}}>
-<button id='addWeightButton' value='Add Weight'>Add</button>
-
-
-<h2>Here's the data:</h2>
-<table id='weighttable' class="display" cellspacing="0" width="400px">
-  <thead>
-  <tr>
-    <th>id</th>
-    <th>Date</th>
-    <th>DateSub</th></th>
-    <th>Weight</th>
-    <th>buttons</th>
-  </tr>
-  </thead>
-</table>
-
-<br>
-
-<h2>Import weight data:</h2>
-<!--<form id="fileForm" method="post" enctype="multipart/form-data">-->
-<!--  <input type="file" name="file"><br /><br />-->
-<!--  <input type="submit" value="Upload">-->
-<!--</form><br>-->
-And the chart here
-
-Footer
+    <section id="weightlist">
+      <table id='weighttable' class="display">
+        <thead>
+        <tr>
+          <th></th>
+          <th>Date</th>
+          <th></th></th>
+          <th>Weight</th>
+          <th></th>
+        </tr>
+        </thead>
+      </table>
+    </section>
+    <section id="uploadform">
+      <form action="/upload" class="dropzone"></form>
+    </section>
+  </section>
+</section>
 <script>
 
 // When an input field has focus, make the save button appear

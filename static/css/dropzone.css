@@ -1,50 +1,9 @@
-/* style.css */
-
-.highlight {color:red;}
-
-/* Make an input blend into its parent */
-/* http://www.monkeyandcrow.com/blog/simple_inline_edit_with_css/ */
-input.inline-edit{
-  /* Eliminate borders and padding */
-  border: none;
-  padding: 0;
-  margin: 0;
-
-  /* Inherit the parent element's typography */
-  font: inherit;
-  color: inherit;
-  line-height: inherit;
-  font-size: inherit;
-  text-align: inherit;
-
-  /* Seems to help alignment in headers */
-  vertical-align: top;
-}
-
-/* Add interaction cues on hover and focus */
-input.inline-edit:hover,
-input.inline-edit:focus{
-  /* Change the background to a light yellow */
-  background-color: #FFD;
-
-  /* A subtle transition never hurts */
-  -webkit-transition: background-color 0.5s;
-     -moz-transition: background-color 0.5s;
-      -ie-transition: background-color 0.5s;
-          transition: background-color 0.5s;
-}
-
-/* Start the save button as hidden */
-.saveRowButton {
-  visibility: hidden;
-} 
-
-
-/* TODO: Move to it's own file*/
 /*
  * The MIT License
  * Copyright (c) 2012 Matias Meno <m@tias.me>
  */
+ 
+ /* Style the file dropzone */
 @-webkit-keyframes passing-through {
   0% {
     opacity: 0;
