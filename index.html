@@ -8,24 +8,27 @@
 <link rel="stylesheet" type="text/css" href="{{url_for('static',filename='css/style.css')}}">
 <link rel="stylesheet" type="text/css" href="{{url_for('static',filename='css/dropzone.css')}}">
 <link rel="stylesheet" type="text/css" href="{{url_for('static',filename='css/inline-edit.css')}}">
+<link rel="stylesheet" type="text/css" href="{{url_for('static',filename='css/d3.css')}}">
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
 <script src="https://cdn.datatables.net/1.10.7/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/tabletools/2.2.4/js/dataTables.tableTools.min.js"></script>
 <script src="{{url_for('static',filename='js/dropzone.js')}}"></script>
+<script src="{{url_for('static',filename='js/weightchart.js')}}"></script>
 
 </head>
 
 <body>
 <header>
-  HEADER
+NEW HEADER
 </header>
 <nav>
   NAVIGATION
 </nav>
 
 <section id="main">
-  <section id="chart">And the chart here</section>
+  <section id="weightchart"></section>
   
   <section id="sidebar">
     <section id="addweight">
@@ -90,7 +93,7 @@ $.ajax({url:'/weights',
   dataType:'json',
   success: function (resultdata) {
     var weights = resultdata.weights;
-    // alert(JSON.stringify(weights));
+    // console.log(JSON.stringify(weights));
     // Add DataTable
     $('#weighttable').DataTable({
       data: weights,
@@ -119,7 +122,8 @@ $.ajax({url:'/weights',
         "data": null,
         "defaultContent": "<button class='saveRowButton'>Save</button><button class='deleteRowButton'>Delete</button>"
       }]
-    });    
+    });
+    // Create a weight array: date,weight, sorted by date and chart it
   }
 });
 
@@ -131,7 +135,7 @@ $('#addWeightButton').click(function(){
     dataType: 'json',
     success: function( resultdata ) {
       // Check if the row already exists
-      // alert(resultdata.result[1]);
+      // console.log(resultdata.result[1]);
       var matchingValue = $('td').filter(function(index){
         return $(this).children().val()===resultdata.result[1];
       });

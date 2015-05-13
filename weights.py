@@ -129,7 +129,7 @@ def weights():
 		else:
 			pass
 	else:
-		# Fetch the inital table to put into DataTables
+		# Fetch the inital table to put into DataTables and the chart
 		print('Fetch inital table')
 		c.execute('''SELECT rowid,* FROM weights''')
 		weights = c.fetchall()
@@ -144,5 +144,4 @@ def weights():
 
 if __name__ == '__main__':
 	# from os import environ
-	# app.run(debug=True, port=environ.get("PORT", 8080), processes=2)
-	app.run(host='0.0.0.0', port='8080')
+	app.run(host='0.0.0.0', port=8080)
