@@ -1,19 +1,20 @@
 #weightchart {
-  width:600px;
-  height:400px;
+  width:100%;
 }
 
-path {
-  stroke: steelblue;
-  stroke-width: 2;
+.axis path, .axis line {
   fill: none;
+  stroke: #777;
+  shape-rendering: crispEdges;
 }
 
-line {
-  stroke: black;
+.axis text {
+  font-family: 'Arial';
+  font-size: 13px;
 }
-
-text {
-  font-family: Arial;
-  font-size: 9pt;
+.tick {
+  stroke-dasharray: 1, 2;
+}
+.bar {
+  fill: FireBrick;
 }

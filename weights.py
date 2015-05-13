@@ -8,13 +8,7 @@ env = Environment(loader=PackageLoader('weights','./'))
 
 template = env.get_template('index.html')
 
-UPLOAD_FOLDER = 'uploads/'
-# ALLOWED_EXTENSIONS = set(['csv'])
-ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'csv'])
-
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 db = sqlite3.connect('weights.sqlite3')
 c  = db.cursor()
@@ -56,35 +50,35 @@ def index():
 # Process a file upload
 @app.route("/upload", methods=['GET', 'POST'])
 def upload_file():
-    if request.method == 'POST':
-			todaysDate = time.strftime("%Y-%m-%d")
-			loadedData = request.get_array(field_name='file')
-			# Test for header row
-			# TODO: test this code, make sure it works
-			if loadedData[0][0].isdigit():
-				print "no header to delete"
-			else:
-				print "deleted a header row"
-				del loadedData[0]
+  if request.method == 'POST':
+		todaysDate = time.strftime("%Y-%m-%d")
+		loadedData = request.get_array(field_name='file')
+		# Test for header row
+		# TODO: test this code, make sure it works
+		if loadedData[0][0].isdigit():
+			print "no header to delete"
+		else:
+			print "deleted a header row"
+			del loadedData[0]
 
-			for row in loadedData:
-				# TODO: Add an error check for the parsed date
-				row[0] = parser.parse(row[0]).date()
-				if row[1]:
-					c.execute('''UPDATE OR IGNORE weights SET date=?, dateSubmitted=?, weight=? WHERE date=?''',(row[0], todaysDate, row[1], row[0]))
-					c.execute('''INSERT OR IGNORE INTO weights (date,dateSubmitted,weight) VALUES (?, ?, ?)''',(row[0], todaysDate, row[1]))
-			db.commit()
-			print 'excel file data loaded'
-			# TODO: Figure out how to pass the updated table back to automatically refresh?
-			return jsonify({"result": request.get_array(field_name='file')})
-    return '''
-    <!doctype html>
-    <title>Upload an excel file</title>
-    <h1>Excel file upload (csv, tsv, csvz, tsvz only)</h1>
-    <form action="" method=post enctype=multipart/form-data><p>
-    <input type=file name=file><input type=submit value=Upload>
-    </form>
-    '''
+		for row in loadedData:
+			# TODO: Add an error check for the parsed date
+			row[0] = parser.parse(row[0]).date()
+			if row[1]:
+				c.execute('''UPDATE OR IGNORE weights SET date=?, dateSubmitted=?, weight=? WHERE date=?''',(row[0], todaysDate, row[1], row[0]))
+				c.execute('''INSERT OR IGNORE INTO weights (date,dateSubmitted,weight) VALUES (?, ?, ?)''',(row[0], todaysDate, row[1]))
+		db.commit()
+		print 'excel file data loaded'
+		# TODO: Figure out how to pass the updated table back to automatically refresh?
+		return jsonify({"result": request.get_array(field_name='file')})
+  return '''
+  <!doctype html>
+  <title>Upload an excel file</title>
+  <h1>Excel file upload (csv, tsv, csvz, tsvz only)</h1>
+  <form action="" method=post enctype=multipart/form-data><p>
+  <input type=file name=file><input type=submit value=Upload>
+  </form>
+  '''
 # Process a file download
 # TODO: Implement file download
 @app.route("/download", methods=['GET'])
@@ -104,7 +98,9 @@ def weights():
 			c.execute('''DELETE FROM weights WHERE rowid=?''',(rowIdToDelete,))
 			# c.execute('''DELETE FROM weights WHERE rowid=11''')
 			db.commit()
+			print 'Row deleted in the table'
 			returnValue = jsonify(result=rowIdToDelete)
+
 		elif 'editrow' in request.form:
 			# Edit the row in the database
 			weightdata = request.form['editrow'], request.form['date'], todaysDate,request.form['weight']
@@ -112,6 +108,7 @@ def weights():
 			# Update the current record
 			c.execute('''UPDATE weights SET rowid=?, date=?, dateSubmitted=?, weight=? WHERE rowid=?''',(weightdata[0], weightdata[1], weightdata[2], weightdata[3], weightdata[0]))
 			db.commit()
+			print 'Row edited in the table'
 			returnValue = jsonify(result=weightdata)
 
 		elif 'addrow' in request.form:
@@ -123,14 +120,13 @@ def weights():
 			c.execute('''INSERT OR IGNORE INTO weights (date,dateSubmitted,weight) VALUES (?, ?, ?)''',(weightdata[0],weightdata[1],weightdata[2]))
 			db.commit()
 			c.execute('''SELECT rowid,* FROM weights WHERE date=?''',(weightdata[0],))
-
 			fetchLastRow = c.fetchall()
+			print 'Row added to the table'
 			returnValue = jsonify(result=fetchLastRow[0])
 		else:
 			pass
 	else:
 		# Fetch the inital table to put into DataTables and the chart
-		print('Fetch inital table')
 		c.execute('''SELECT rowid,* FROM weights''')
 		weights = c.fetchall()
 		print 'Inital table fetched'
@@ -143,5 +139,5 @@ def weights():
 
 
 if __name__ == '__main__':
-	# from os import environ
+	# app.run(debug=True, host='0.0.0.0', port=8080)
 	app.run(host='0.0.0.0', port=8080)

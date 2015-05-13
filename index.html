@@ -28,7 +28,9 @@ NEW HEADER
 </nav>
 
 <section id="main">
-  <section id="weightchart"></section>
+  <section id="weightchart">
+    <svg id="visualisation" width="1000" height="500"></svg>
+  </section>
   
   <section id="sidebar">
     <section id="addweight">
@@ -79,10 +81,11 @@ $('#fileForm').submit(function() {
     contentType: false,
     processData: false,
     type: 'POST',     
-    success: function(data){
+    success: function(resultdata){
+      var weights = resultdata.weights;
       // Redraw the table
-      var table = $('#weighttable').DataTable();
-      table.draw();
+      // TODO: Fix this
+      addweightchart(weights);
     }
   });
 });
@@ -95,35 +98,12 @@ $.ajax({url:'/weights',
     var weights = resultdata.weights;
     // console.log(JSON.stringify(weights));
     // Add DataTable
-    $('#weighttable').DataTable({
-      data: weights,
-      "paging":   false,
-      "info":     false,
-      "ordering": true,
-      "order": [ 1, 'desc' ],
-      "language": {
-        "emptyTable": "You haven't started tracking your weight. Enter today's weigh-in above!"
-      },
-      "columnDefs": [{
-        "targets": [0],
-        "visible": false,
-        "searchable": false
-      },{
-        "targets": [2],
-        "visible": false,
-        "searchable": false
-      },{
-        "targets":[3],
-        "render": function (data, type, row) {
-          return "<input type='number' class='inline-edit weight' value='" + data + "'>";
-        }
-      },{
-        "targets": -1,
-        "data": null,
-        "defaultContent": "<button class='saveRowButton'>Save</button><button class='deleteRowButton'>Delete</button>"
-      }]
-    });
-    // Create a weight array: date,weight, sorted by date and chart it
+    addweightchart(weights);
+
+    // Create a weight array sorted by date, calculate and add smoothed weight and chart it
+    var calcedweighttable = cleanweighttable(weights);
+    console.log(calcedweighttable[1]);
+    initChart(calcedweighttable);
   }
 });
 
@@ -148,8 +128,7 @@ $('#addWeightButton').click(function(){
           .draw();
       } else {
         table.row.add([resultdata.result[0],resultdata.result[1],resultdata.result[2],resultdata.result[3]])
-          .invalidate().draw().node()
-          .draw();
+          .draw().node();
         // console.log('matchingValue does not exist');
       }
     },
@@ -186,12 +165,12 @@ $('body').on('click','.saveRowButton',(function(){
   var table = $('#weighttable').DataTable();
   var thisRow = $(this).parents('tr');
   var thisRowId = table.cell(thisRow, 0).data();
-  console.log(thisRowId);
+  // console.log(thisRowId);
 	var newData = [
 		table.cell(thisRow, 0).data(),
 		table.cell(thisRow, 1).data(),
 		thisRow.children().children('.weight').val()];
-  console.log(newData);
+  // console.log(newData);
 	// Send the new data to the server
 	$.ajax({url:'/weights',
  		type:'POST',
@@ -207,6 +186,71 @@ $('body').on('click','.saveRowButton',(function(){
   });
 	
 }));
+
+function addweightchart(weights) {
+  $('#weighttable').DataTable({
+    data: weights,
+    "destroy": true,
+    "paging":   false,
+    "info":     false,
+    "ordering": true,
+    "order": [ 1, 'desc' ],
+    "language": {
+      "emptyTable": "You haven't started tracking your weight. Enter today's weigh-in above!"
+    },
+    "columnDefs": [{
+      "targets": [0],
+      "visible": false,
+      "searchable": false
+    },{
+      "targets": [2],
+      "visible": false,
+      "searchable": false
+    },{
+      "targets":[3],
+      "render": function (data, type, row) {
+        return "<input type='number' class='inline-edit weight' value='" + data + "'>";
+      }
+    },{
+      "targets": -1,
+      "data": null,
+      "defaultContent": "<button class='saveRowButton'>Save</button><button class='deleteRowButton'>Delete</button>"
+    }]
+  });
+}
+
+function cleanweighttable(weights) {
+  // Sort table by date
+  function Comparator(a,b) {
+    if (a[1] < b[1]) return -1;
+    if (a[1] > b[1]) return 1;
+    return 0;
+  }
+  weights = weights.sort(Comparator);
+  // Add exponentially averaged weights column
+  // [id],[date],[datesum],[weight]
+  // expand all rows to have the correct amount of cols
+  var cols = 5;
+  for (var i = 0; i < weights.length; i++) {
+    for (var j =  weights[i].length; j < cols; j++) {
+      var currentweight=weights[i][3];
+      var smoothedweight;
+      var EXPRATE = 0.1;
+      if (i==0) {
+        // First datapoint needs to be equal to entered weight
+        smoothedweight = currentweight;
+      } else {
+        var previoussmoothedweight=weights[i-1][4];
+        // console.log(previoussmoothedweight);
+        // console.log(currentweight);
+        smoothedweight = previoussmoothedweight+(EXPRATE*(currentweight-previoussmoothedweight));
+      }
+      weights[i][4] = smoothedweight;
+    }
+  }
+  console.log(weights[1]);
+  return weights;
+}
 
 
 </script>
