@@ -1,0 +1,9 @@
+.c3-line-LowWeight,.c3-line-HighWeight {
+  stroke-width:0px;
+}
+.c3-line-Smoothed {
+  stroke-width:2px;
+}
+.c3-circles-Smoothed circle {
+  visibility:hidden !important;
+}

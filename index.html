@@ -8,13 +8,14 @@
 <link rel="stylesheet" type="text/css" href="{{url_for('static',filename='css/style.css')}}">
 <link rel="stylesheet" type="text/css" href="{{url_for('static',filename='css/dropzone.css')}}">
 <link rel="stylesheet" type="text/css" href="{{url_for('static',filename='css/inline-edit.css')}}">
-<link rel="stylesheet" type="text/css" href="{{url_for('static',filename='css/d3.css')}}">
+<link rel="stylesheet" type="text/css" href="{{url_for('static',filename='css/chart.css')}}">
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js" charset='utf-8'></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
 <script src="https://cdn.datatables.net/1.10.7/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/tabletools/2.2.4/js/dataTables.tableTools.min.js"></script>
 <script src="{{url_for('static',filename='js/dropzone.js')}}"></script>
+<script src="{{url_for('static',filename='js/weighttable.js')}}"></script>
 <script src="{{url_for('static',filename='js/weightchart.js')}}"></script>
 
 </head>
@@ -28,65 +29,63 @@ NEW HEADER
 </nav>
 
 <section id="main">
-  <section id="weightchart">
-    <svg id="visualisation" width="1000" height="500"></svg>
-  </section>
-  
+<div id="chart"></div>
   <section id="sidebar">
-    <section id="addweight">
-      <h2>Add your weight:</h2>
-      Date:
-      <input type='date' id='newDate' value={{currentdate}}>
-      Weight:
-      <input type='number' id='newWeight' value={{latestweight.0}}>
-      <button id='addWeightButton' value='Add Weight'>Add</button>
-    </section>
+  <section id="addweight">
+    <h2>Add your weight:</h2>
+    Date:
+    <input type='date' id='newDate' value={{currentdate}}>
+    Weight:
+    <input type='number' id='newWeight' value={{latestweight.0}}>
+    <button id='addWeightButton' value='Add Weight'>Add</button>
+  </section>
 
-    <section id="weightlist">
-      <table id='weighttable' class="display">
-        <thead>
-        <tr>
-          <th></th>
-          <th>Date</th>
-          <th></th></th>
-          <th>Weight</th>
-          <th></th>
-        </tr>
-        </thead>
-      </table>
-    </section>
-    <section id="uploadform">
-      <form action="/upload" class="dropzone"></form>
-    </section>
+  <section id="weightlist">
+    <table id='weighttable' class="display">
+    <thead>
+    <tr>
+      <th></th>
+      <th>Date</th>
+      <th></th>
+      <th>Weight</th>
+      <th>Smoothed</th>
+      <th></th>
+    </tr>
+    </thead>
+    </table>
+  </section>
+  <section id="uploadform">
+    <form action="/upload" class="dropzone"></form>
+  </section>
   </section>
 </section>
 <script>
 
-// When an input field has focus, make the save button appear
+// When an input field in the table has focus, make the save button appear
 // TODO: Make sure last value is put back in the field if they cancel out of the field
 $('body').on('focus', 'tr', function(){
-    $(this).children(":last").children(".saveRowButton").css('visibility','visible');
+  $(this).children(":last").children(".saveRowButton").css('visibility','visible');
   }).on('blur', 'tr', function(){
-    $(this).children(":last").children(".saveRowButton").css('visibility','hidden');
+  $(this).children(":last").children(".saveRowButton").css('visibility','hidden');
   });
 
 // Submit an excel file
 $('#fileForm').submit(function() {
   var data = new FormData(this); // <-- 'this' is your form element
   $.ajax({
-    url: '/upload',
-    type: 'POST',
-    data: data,
-    cache: false,
-    contentType: false,
-    processData: false,
-    type: 'POST',     
-    success: function(resultdata){
-      var weights = resultdata.weights;
-      // Redraw the table
-      // TODO: Fix this
-      addweightchart(weights);
-    }
+  url: '/upload',
+  type: 'POST',
+  data: data,
+  cache: false,
+  contentType: false,
+  processData: false,
+  success: function(resultdata){
+    var weights = resultdata.weights;
+    console.log(weights);
+    // Redraw the table
+    // TODO: Fix this
+    addweighttable(weights);
+  }
   });
 });
 
@@ -95,49 +94,61 @@ $.ajax({url:'/weights',
   type:'GET',
   dataType:'json',
   success: function (resultdata) {
-    var weights = resultdata.weights;
+    // var weights = resultdata.weights;
     // console.log(JSON.stringify(weights));
+    // Massage the data to work with DataTables and the chart
+    var weights = processWeightTable(resultdata.weights);
     // Add DataTable
-    addweightchart(weights);
+    addweighttable(weights);
+    // Interate through the smoothed weight column
+    calculateSmoothedWeight();
 
-    // Create a weight array sorted by date, calculate and add smoothed weight and chart it
-    var calcedweighttable = cleanweighttable(weights);
-    console.log(calcedweighttable[1]);
-    initChart(calcedweighttable);
+    // Create chart
+    // initChart(calcedweighttable);
   }
 });
 
 // Add or update a weight to the table
 $('#addWeightButton').click(function(){
+  console.log('Start')
   var table = $('#weighttable').DataTable();
   $.ajax({url:'/weights',
-    type:'POST',
-    dataType: 'json',
-    success: function( resultdata ) {
-      // Check if the row already exists
-      // console.log(resultdata.result[1]);
-      var matchingValue = $('td').filter(function(index){
-        return $(this).children().val()===resultdata.result[1];
-      });
-      // TODO: Add an animation to the edited row to draw the eye
-      matchingValue.parent().addClass("highlight");
-      if(matchingValue.length){
-        // console.log('matchingValue exists');
-        table.row(matchingValue.parent())
-          .data([resultdata.result[0],resultdata.result[1],resultdata.result[2],resultdata.result[3]])
-          .draw();
-      } else {
-        table.row.add([resultdata.result[0],resultdata.result[1],resultdata.result[2],resultdata.result[3]])
-          .draw().node();
-        // console.log('matchingValue does not exist');
-      }
-    },
-    data: {
-      // Pass the data to add the row on the server
-      addrow: 'yes',
-      weight: $('#newWeight').val(),
-      date: $('#newDate').val() 
+  type:'POST',
+  dataType: 'json',
+  success: function( resultdata ) {
+    // Stuff the data into an assossiative array
+    var addData = {
+      "Id":resultdata.result[0],
+      "wDate":resultdata.result[1],
+      "DateSub":resultdata.result[2],
+      "Weight":resultdata.result[3]
+    };
+    // Check if the row already exists
+    // console.log(resultdata.result);
+    var matchingValue = $('td').filter(function(index){
+      return $(this).html()===addData.wDate;
+    });
+    // TODO: Add an animation to the edited row to draw the eye
+    matchingValue.parent().addClass("highlight");
+    if(matchingValue.length){
+      // console.log('matchingValue exists');
+      table.row(matchingValue.parent())
+      .data([addData.Id,addData.wDate,addData.DateSub,addData.Weight,null])
+      .draw();
+    } else {
+      table.row.add([addData.Id,addData.wDate,addData.DateSub,addData.Weight,null])
+      .draw().node();
+      // console.log('matchingValue does not exist');
     }
+    // Add smoothed weight data
+    calculateSmoothedWeight();
+  },
+  data: {
+    // Pass the data to add the row on the server
+    addrow: 'yes',
+    weight: $('#newWeight').val(),
+    date: $('#newDate').val() 
+  }
    });
 });
 
@@ -147,112 +158,184 @@ $('body').on('click', '.deleteRowButton', (function() {
   var thisRow = $(this).parents('tr');
   var thisRowId = table.cell(thisRow, 0).data();
   $.ajax({url:'/weights',
-    type:'POST',
-    dataType: 'json',
-    success: function(result) {
-      // Delete the row on the client
-      table.row(thisRow).remove().draw();
-    },
-    data: {
-      // Pass the row id to delete on the server
-      deleterow: thisRowId
-    }
+  type:'POST',
+  dataType: 'json',
+  success: function(result) {
+    // Delete the row on the client
+    table.row(thisRow).remove().draw();
+    calculateSmoothedWeight();
+  },
+  data: {
+    // Pass the row id to delete on the server
+    deleterow: thisRowId
+  }
   });
 }));
 
 // Save the edited fields
+// TODO: Make sure the value returns to the old value if they don't click save
 $('body').on('click','.saveRowButton',(function(){
   var table = $('#weighttable').DataTable();
   var thisRow = $(this).parents('tr');
   var thisRowId = table.cell(thisRow, 0).data();
   // console.log(thisRowId);
-	var newData = [
-		table.cell(thisRow, 0).data(),
-		table.cell(thisRow, 1).data(),
-		thisRow.children().children('.weight').val()];
-  // console.log(newData);
-	// Send the new data to the server
-	$.ajax({url:'/weights',
- 		type:'POST',
- 		dataType: 'json',
-		success: function(resultdata) {
-		},
- 		data: {
-			// Pass the rowid and data to update the record on the server
-			editrow: newData[0],
-			date: newData[1],
-			weight: newData[2]
-		}
+  var newData = {
+    "Id": table.cell(thisRow, 0).data(),
+    "wDate": table.cell(thisRow, 1).data(),
+    "Weight": thisRow.children().children('.weight').val()
+  };
+  // Send the new data to the server
+  $.ajax({url:'/weights',
+     type:'POST',
+     dataType: 'json',
+    success: function(resultdata) {
+      console.log(resultdata.result[2]);
+      // Stuff the data into an assossiative array
+      var editData = {
+        "Id":resultdata.result[0],
+        "wDate":resultdata.result[1],
+        "DateSub":resultdata.result[2],
+        "Weight":resultdata.result[3]
+      };
+      // Check if the row already exists
+      // console.log(resultdata.result);
+      var matchingValue = $('td').filter(function(index){
+        return $(this).html()===editData.wDate;
+      });
+      // TODO: Add an animation to the edited row to draw the eye
+      matchingValue.parent().addClass("highlight");
+      if(matchingValue.length){
+        // console.log('matchingValue exists');
+        table.row(matchingValue.parent())
+        .data([editData.Id,editData.wDate,editData.DateSub,editData.Weight,null])
+        .draw();
+      } else {
+        table.row.add([editData.Id,addData.wDate,editData.DateSub,editData.Weight,null])
+        .draw().node();
+        // console.log('matchingValue does not exist');
+      }
+      calculateSmoothedWeight();
+    },
+    data: {
+      // Pass the rowid and data to update the record on the server
+      editrow: newData.Id,
+      date: newData.wDate,
+      weight: newData.Weight
+    }
   });
-	
 }));
 
-function addweightchart(weights) {
+
+function addweighttable(weights) {
   $('#weighttable').DataTable({
-    data: weights,
-    "destroy": true,
-    "paging":   false,
-    "info":     false,
-    "ordering": true,
-    "order": [ 1, 'desc' ],
-    "language": {
-      "emptyTable": "You haven't started tracking your weight. Enter today's weigh-in above!"
-    },
-    "columnDefs": [{
-      "targets": [0],
-      "visible": false,
-      "searchable": false
-    },{
-      "targets": [2],
-      "visible": false,
-      "searchable": false
-    },{
-      "targets":[3],
-      "render": function (data, type, row) {
-        return "<input type='number' class='inline-edit weight' value='" + data + "'>";
-      }
-    },{
-      "targets": -1,
-      "data": null,
-      "defaultContent": "<button class='saveRowButton'>Save</button><button class='deleteRowButton'>Delete</button>"
-    }]
+  data: weights,
+  "destroy": true,
+  "paging":   false,
+  "info":   false,
+  "ordering": true,
+  "order": [ 1, 'desc' ],
+  "language": {
+    "emptyTable": "You haven't started tracking your weight. Enter today's weigh-in above!"
+  },
+  "columnDefs": [{
+    "targets": [0],
+    "visible": false,
+    "searchable": false
+  },{
+    "targets": [2],
+    "visible": false,
+    "searchable": false
+  },{
+    "targets":[3],
+    "render": function (data, type, row) {
+    return "<input type='number' class='inline-edit weight' value='" + data + "'>";
+    }
+  },{
+    "targets": -1,
+    "data": null,
+    "defaultContent": "<button class='saveRowButton'>Save</button><button class='deleteRowButton'>Delete</button>"
+  }]
   });
 }
 
-function cleanweighttable(weights) {
+// Sort the table and add a column for the smoothed weight
+function processWeightTable(weights) {
   // Sort table by date
-  function Comparator(a,b) {
-    if (a[1] < b[1]) return -1;
-    if (a[1] > b[1]) return 1;
-    return 0;
-  }
   weights = weights.sort(Comparator);
-  // Add exponentially averaged weights column
-  // [id],[date],[datesum],[weight]
+
+  // Add smoothed weight data
   // expand all rows to have the correct amount of cols
-  var cols = 5;
-  for (var i = 0; i < weights.length; i++) {
-    for (var j =  weights[i].length; j < cols; j++) {
-      var currentweight=weights[i][3];
-      var smoothedweight;
-      var EXPRATE = 0.1;
-      if (i==0) {
-        // First datapoint needs to be equal to entered weight
-        smoothedweight = currentweight;
-      } else {
-        var previoussmoothedweight=weights[i-1][4];
-        // console.log(previoussmoothedweight);
-        // console.log(currentweight);
-        smoothedweight = previoussmoothedweight+(EXPRATE*(currentweight-previoussmoothedweight));
-      }
-      weights[i][4] = smoothedweight;
+  var cols=5;
+  for (var i = 0; i < weights.length; i++)
+  {
+    for (var j =  weights[i].length; j < cols; j++)
+    {
+      weights[i].push(null);
     }
   }
-  console.log(weights[1]);
   return weights;
 }
 
+function calculateSmoothedWeight() {
+  var table = $('#weighttable').DataTable();
+  for(var i=0;i < table.data().length; i++) {
+    var currentweight = table.cell(i,3).data();
+    var smoothedweight;
+    var EXPRATE = 0.1;
+    if (i==0) {
+      //First datapoint needs to be equat to the entered weight
+      smoothedweight = currentweight;
+    } else {
+      var previoussmoothedweight = table.cell(i-1,4).data();
+      smoothedweight = previoussmoothedweight+(EXPRATE*(currentweight-previoussmoothedweight));
+    }
+    table.cell(i,4).data(smoothedweight).draw();
+  }
+}
 
+
+function initChart(weights) {
+  var chart = c3.generate({
+    bindto: '#chart',
+    data: {
+      x: 'Date',
+      columns: [weights[1],weights[3],weights[4],weights[5]]
+    },
+    axis: {
+      x: {
+        type: 'timeseries',
+        tick: {
+          tick: {
+          format: function (x) { return x.getFullYear(); },
+          fit:true,
+          count: 3
+          },
+          culling: {max: 3},
+          format: '%Y-%m-%d'
+        }
+      }
+    },
+    color: {
+      // LowWeight: '#00ff00',
+      // HighWeight: '#ff0000',
+      // Smoothed: '#0000ff'
+      pattern: ['#00ff00', '#ff0000', '#0000ff']
+    }
+  });
+  return chart;
+}
+
+function transpose(a) {
+  return Object.keys(a[0]).map(
+    function (c) { return a.map(function (r) { return r[c]; }); }
+    );
+  }
+
+function Comparator(a,b) {
+  if (a[1] < b[1]) return -1;
+  if (a[1] > b[1]) return 1;
+  return 0;
+}
 </script>
 </body>
 </html>
