@@ -102,25 +102,32 @@ def weights():
     elif 'editrow' in request.form:
       # Edit the row in the database
       c.execute('''UPDATE weights SET rowid=?, date=?, dateSubmitted=?, weight=? WHERE rowid=?''',(
-                      request.form['editrow'],
-                      request.form['date'],
-                      todaysDate,
-                      request.form['weight'],
-                      request.form['editrow']))
+          request.form['editrow'],
+          request.form['date'],
+          todaysDate,
+          request.form['weight'],
+          request.form['editrow']))
       db.commit()
       print 'Row edited in the table'
-      returnValue = jsonify(result=(request.form['editrow'],
-                      request.form['date'],
-                      todaysDate,
-                      request.form['weight'],
-                      request.form['editrow']))
+      returnValue = jsonify(result=(
+          request.form['editrow'],
+          request.form['date'],
+          todaysDate,
+          request.form['weight']))
 
     elif 'addrow' in request.form:
       print request.form
       print todaysDate
       # Try to update a weight data row if the data already exists, and if it doesn't exist, insert it
-      c.execute('''UPDATE OR IGNORE weights SET date=?, dateSubmitted=?, weight=? WHERE date=?''',(request.form['date'],todaysDate,request.form['weight'],request.form['date']))
-      c.execute('''INSERT OR IGNORE INTO weights (date,dateSubmitted,weight) VALUES (?, ?, ?)''',(request.form['date'],todaysDate,request.form['weight']))
+      c.execute('''UPDATE OR IGNORE weights SET date=?, dateSubmitted=?, weight=? WHERE date=?''',(
+          request.form['date'],
+          todaysDate,
+          request.form['weight'],
+          request.form['date']))
+      c.execute('''INSERT OR IGNORE INTO weights (date,dateSubmitted,weight) VALUES (?, ?, ?)''',(
+          request.form['date'],
+          todaysDate,
+          request.form['weight']))
       db.commit()
       c.execute('''SELECT rowid,* FROM weights WHERE date=?''',(request.form['date'],))
       fetchEditedRow = c.fetchall() # TODO: Should this be fetchone()?

@@ -8,10 +8,12 @@
 <link rel="stylesheet" type="text/css" href="{{url_for('static',filename='css/style.css')}}">
 <link rel="stylesheet" type="text/css" href="{{url_for('static',filename='css/dropzone.css')}}">
 <link rel="stylesheet" type="text/css" href="{{url_for('static',filename='css/inline-edit.css')}}">
+<!--<link rel="stylesheet" type="text/css" href="{{url_for('static',filename='c3-master/c3.css')}}">-->
 <link rel="stylesheet" type="text/css" href="{{url_for('static',filename='css/chart.css')}}">
 
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js" charset='utf-8'></script>
+<!--<script src="{{url_for('static',filename='c3-master/c3.js')}}"></script>-->
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
 <script src="https://cdn.datatables.net/1.10.7/js/jquery.dataTables.min.js"></script>
 <script src="{{url_for('static',filename='js/dropzone.js')}}"></script>
@@ -60,6 +62,8 @@ NEW HEADER
   </section>
 </section>
 <script>
+// Global array to hold the master weight information. I hate doing this...
+var globalWeightArray = [];
 
 // When an input field in the table has focus, make the save button appear
 // TODO: Make sure last value is put back in the field if they cancel out of the field
@@ -69,49 +73,61 @@ $('body').on('focus', 'tr', function(){
   $(this).children(":last").children(".saveRowButton").css('visibility','hidden');
   });
 
-// Submit an excel file
-$('#fileForm').submit(function() {
-  var data = new FormData(this); // <-- 'this' is your form element
-  $.ajax({
-  url: '/upload',
-  type: 'POST',
-  data: data,
-  cache: false,
-  contentType: false,
-  processData: false,
-  success: function(resultdata){
-    var weights = resultdata.weights;
-    console.log(weights);
-    // Redraw the table
-    // TODO: Fix this
-    addweighttable(weights);
-  }
-  });
-});
-
 // Fill the initial table with the weight information
 $.ajax({url:'/weights',
   type:'GET',
   dataType:'json',
   success: function (resultdata) {
-    // var weights = resultdata.weights;
-    // console.log(JSON.stringify(weights));
-    // Massage the data to work with DataTables and the chart
-    var weights = processWeightTable(resultdata.weights);
+    // Load data into the global array to work with DataTables and the chart
+    initializeWeightArray(resultdata.weights);
     // Add DataTable
-    addweighttable(weights);
-    // Interate through the smoothed weight column
-    calculateSmoothedWeight();
+    addWeightTable();
 
     // Create chart
     // initChart(calcedweighttable);
   }
 });
 
+
+// Submit an excel file
+$('#fileForm').submit(function() {
+  var data = new FormData(this); // <-- 'this' is your form element
+  // Upload the excel file
+  $.ajax({url: '/upload',
+  type: 'POST',
+  dataType: 'json',
+  data: data,
+  cache: false,
+  contentType: false,
+  processData: false,
+  success: function(resultdata){
+    console.log("CSV Submitted");
+  },
+  error: function(result){
+    console.log('here');
+  }
+  });
+  // Retrieve the new table from the server
+  $.ajax({url: '/weights',
+  type: 'GET',
+  dataType: 'json',
+  success: function(resultdata){
+    console.log("here");
+    // // Load data into the global array to work with DataTables and the chart
+    // initializeWeightArray(resultdata.weights);
+    // // Redraw the DataTable with the new data
+    // var table = $('#weighttable').DataTable();
+    // table.clear().draw();
+    // table.rows.add(globalWeightArray).draw();
+  },
+  error: function(result){
+    console.log('here');
+  }
+  });
+});
+
 // Add or update a weight to the table
 $('#addWeightButton').click(function(){
-  console.log('Start')
-  var table = $('#weighttable').DataTable();
   $.ajax({url:'/weights',
   type:'POST',
   dataType: 'json',
@@ -123,23 +139,7 @@ $('#addWeightButton').click(function(){
       "DateSub":resultdata.result[2],
       "Weight":resultdata.result[3]
     };
-    // Check if the row already exists
-    // console.log(resultdata.result);
-    var matchingValue = $('td').filter(function(index){
-      return $(this).html()===addData.wDate;
-    });
-    // TODO: Add an animation to the edited row to draw the eye
-    matchingValue.parent().addClass("highlight");
-    if(matchingValue.length){
-      // console.log('matchingValue exists');
-      table.row(matchingValue.parent())
-      .data([addData.Id,addData.wDate,addData.DateSub,addData.Weight,null])
-      .draw();
-    } else {
-      table.row.add([addData.Id,addData.wDate,addData.DateSub,addData.Weight,null])
-      .draw().node();
-      // console.log('matchingValue does not exist');
-    }
+    insertRow(addData);
     // Add smoothed weight data
     calculateSmoothedWeight();
   },
@@ -149,7 +149,7 @@ $('#addWeightButton').click(function(){
     weight: $('#newWeight').val(),
     date: $('#newDate').val() 
   }
-   });
+  });
 });
 
 // Delete a weight from the table
@@ -163,6 +163,9 @@ $('body').on('click', '.deleteRowButton', (function() {
   success: function(result) {
     // Delete the row on the client
     table.row(thisRow).remove().draw();
+    // TODO: Delete the row on the global array
+    
+    // Recalculate the smoothed weight
     calculateSmoothedWeight();
   },
   data: {
@@ -189,7 +192,6 @@ $('body').on('click','.saveRowButton',(function(){
      type:'POST',
      dataType: 'json',
     success: function(resultdata) {
-      console.log(resultdata.result[2]);
       // Stuff the data into an assossiative array
       var editData = {
         "Id":resultdata.result[0],
@@ -197,23 +199,7 @@ $('body').on('click','.saveRowButton',(function(){
         "DateSub":resultdata.result[2],
         "Weight":resultdata.result[3]
       };
-      // Check if the row already exists
-      // console.log(resultdata.result);
-      var matchingValue = $('td').filter(function(index){
-        return $(this).html()===editData.wDate;
-      });
-      // TODO: Add an animation to the edited row to draw the eye
-      matchingValue.parent().addClass("highlight");
-      if(matchingValue.length){
-        // console.log('matchingValue exists');
-        table.row(matchingValue.parent())
-        .data([editData.Id,editData.wDate,editData.DateSub,editData.Weight,null])
-        .draw();
-      } else {
-        table.row.add([editData.Id,addData.wDate,editData.DateSub,editData.Weight,null])
-        .draw().node();
-        // console.log('matchingValue does not exist');
-      }
+      insertRow(editData);
       calculateSmoothedWeight();
     },
     data: {
@@ -225,10 +211,10 @@ $('body').on('click','.saveRowButton',(function(){
   });
 }));
 
-
-function addweighttable(weights) {
+// Add new DataTable
+function addWeightTable() {
   $('#weighttable').DataTable({
-  data: weights,
+  data: globalWeightArray,
   "destroy": true,
   "paging":   false,
   "info":   false,
@@ -258,71 +244,83 @@ function addweighttable(weights) {
   });
 }
 
-// Sort the table and add a column for the smoothed weight
-function processWeightTable(weights) {
-  // Sort table by date
-  weights = weights.sort(Comparator);
-
-  // Add smoothed weight data
-  // expand all rows to have the correct amount of cols
+// Load the array and add a column for the smoothed weight, and calculate the smoothed weight
+function initializeWeightArray(weights) {
+  // load global array with the data from the server
+  globalWeightArray = weights;
+  // Expand all rows to have the correct amount of cols for the smoothed data
   var cols=5;
-  for (var i = 0; i < weights.length; i++)
+  for (var i = 0; i < globalWeightArray.length; i++)
   {
-    for (var j =  weights[i].length; j < cols; j++)
+    for (var j =  globalWeightArray[i].length; j < cols; j++)
     {
-      weights[i].push(null);
+      globalWeightArray[i].push(null);
     }
   }
-  return weights;
+  calculateSmoothedWeight();
+  return globalWeightArray;
 }
 
+// Sort the global array and calculate the smoothed weights
 function calculateSmoothedWeight() {
-  var table = $('#weighttable').DataTable();
-  for(var i=0;i < table.data().length; i++) {
-    var currentweight = table.cell(i,3).data();
+  //id,date,datesub,weight,smoothedweight
+  // Check the array exists
+  if (globalWeightArray.length){
+    globalWeightArray = globalWeightArray.sort(Comparator);
+  
+    // console.log(globalWeightArray);
+    var previoussmoothedweight = globalWeightArray[0][3];
+    var currentweight = globalWeightArray[0][3];
     var smoothedweight;
     var EXPRATE = 0.1;
-    if (i==0) {
-      //First datapoint needs to be equat to the entered weight
-      smoothedweight = currentweight;
-    } else {
-      var previoussmoothedweight = table.cell(i-1,4).data();
+    var arrayLength = globalWeightArray.length;
+  
+    //TODO: Replace this for loop with map
+    for (var i = 0; i < arrayLength; i++) {
+      currentweight = globalWeightArray[i][3];
       smoothedweight = previoussmoothedweight+(EXPRATE*(currentweight-previoussmoothedweight));
+      previoussmoothedweight = smoothedweight;
+      globalWeightArray[i][4] = smoothedweight;
     }
-    table.cell(i,4).data(smoothedweight).draw();
   }
+}
+
+function insertRow(data) {
+  var table = $('#weighttable').DataTable();
+  var matchingIndex;
+
+  // Check if a row exists, and get it's index
+  for(var j=0;j<globalWeightArray.length;j++) {
+    if(globalWeightArray[j][1]===data.wDate){
+      matchingIndex = j;
+      break;
+    }
+  }
+  if(matchingIndex){
+    // ROW EXISTS, UPDATE IT
+    // Replace existing row in globalWeightArray
+    globalWeightArray.splice(matchingIndex,1,[data.Id,data.wDate,data.DateSub,data.Weight,null]);
+  } else {
+    // ROW DOES NOT EXIST, ADD NEW ROW
+    // Add row to globalWeightArray
+    globalWeightArray.push([data.Id,data.wDate,data.DateSub,data.Weight,null]);
+  }
+  // Sort array and recalculate the smoothed weight
+  calculateSmoothedWeight();
+  // Redraw the DataTable with the new data
+  table.clear().draw();
+  table.rows.add(globalWeightArray).draw();
+  // TODO: Add an animation to the edited row to draw the eye
+  // Add some css to show which row was edited
+  var matchingValue = $('td').filter(function(index){
+    return $(this).html()===data.wDate;
+  });
+  matchingValue.parent().addClass("highlight");
 }
 
 
 function initChart(weights) {
-  var chart = c3.generate({
-    bindto: '#chart',
-    data: {
-      x: 'Date',
-      columns: [weights[1],weights[3],weights[4],weights[5]]
-    },
-    axis: {
-      x: {
-        type: 'timeseries',
-        tick: {
-          tick: {
-          format: function (x) { return x.getFullYear(); },
-          fit:true,
-          count: 3
-          },
-          culling: {max: 3},
-          format: '%Y-%m-%d'
-        }
-      }
-    },
-    color: {
-      // LowWeight: '#00ff00',
-      // HighWeight: '#ff0000',
-      // Smoothed: '#0000ff'
-      pattern: ['#00ff00', '#ff0000', '#0000ff']
-    }
-  });
-  return chart;
+
 }
 
 function transpose(a) {
