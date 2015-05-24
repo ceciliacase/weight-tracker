@@ -57,7 +57,7 @@ NEW HEADER
     </table>
   </section>
   <section id="uploadform">
-    <form action="/upload" class="dropzone"></form>
+    <form id="csv-dropzone" action="/upload" class="dropzone"></form>
   </section>
   </section>
 </section>
@@ -65,13 +65,43 @@ NEW HEADER
 // Global array to hold the master weight information. I hate doing this...
 var globalWeightArray = [];
 
+// Configure dropzone
+// Upload file to server
+Dropzone.options.csvDropzone = { 
+  maxFilesize: 2,
+  uploadMultiple: false,
+  init: function() {
+    // this.on("addedfile", function(file) { alert("Added file."); });
+    this.on("success", function() {
+      // Retrieve the new table from the server
+      $.ajax({url: '/weights',
+      type: 'GET',
+      dataType: 'json',
+      success: function(resultdata){
+        // On success, get the data back from the server and reinitialize the tables
+        // Load data into the global array to work with DataTables and the chart
+        initializeWeightArray(resultdata.weights);
+        // Redraw the DataTable with the new data
+        var table = $('#weighttable').DataTable();
+        table.clear().draw();
+        table.rows.add(globalWeightArray).draw();
+      },
+      error: function(result){
+        console.log('error in upload');
+      }
+      });
+    });
+  }
+};
+
+
 // When an input field in the table has focus, make the save button appear
 // TODO: Make sure last value is put back in the field if they cancel out of the field
 $('body').on('focus', 'tr', function(){
   $(this).children(":last").children(".saveRowButton").css('visibility','visible');
   }).on('blur', 'tr', function(){
   $(this).children(":last").children(".saveRowButton").css('visibility','hidden');
-  });
+});
 
 // Fill the initial table with the weight information
 $.ajax({url:'/weights',
@@ -86,44 +116,6 @@ $.ajax({url:'/weights',
     // Create chart
     // initChart(calcedweighttable);
   }
-});
-
-
-// Submit an excel file
-$('#fileForm').submit(function() {
-  var data = new FormData(this); // <-- 'this' is your form element
-  // Upload the excel file
-  $.ajax({url: '/upload',
-  type: 'POST',
-  dataType: 'json',
-  data: data,
-  cache: false,
-  contentType: false,
-  processData: false,
-  success: function(resultdata){
-    console.log("CSV Submitted");
-  },
-  error: function(result){
-    console.log('here');
-  }
-  });
-  // Retrieve the new table from the server
-  $.ajax({url: '/weights',
-  type: 'GET',
-  dataType: 'json',
-  success: function(resultdata){
-    console.log("here");
-    // // Load data into the global array to work with DataTables and the chart
-    // initializeWeightArray(resultdata.weights);
-    // // Redraw the DataTable with the new data
-    // var table = $('#weighttable').DataTable();
-    // table.clear().draw();
-    // table.rows.add(globalWeightArray).draw();
-  },
-  error: function(result){
-    console.log('here');
-  }
-  });
 });
 
 // Add or update a weight to the table
@@ -157,6 +149,7 @@ $('body').on('click', '.deleteRowButton', (function() {
   var table = $('#weighttable').DataTable();
   var thisRow = $(this).parents('tr');
   var thisRowId = table.cell(thisRow, 0).data();
+  var matchingIndex;
   $.ajax({url:'/weights',
   type:'POST',
   dataType: 'json',
@@ -164,7 +157,22 @@ $('body').on('click', '.deleteRowButton', (function() {
     // Delete the row on the client
     table.row(thisRow).remove().draw();
     // TODO: Delete the row on the global array
-    
+    // Check if a row exists, and get it's index
+    for(var j=0;j<globalWeightArray.length;j++) {
+      if(globalWeightArray[j][0]===thisRowId){
+        matchingIndex = j;
+        break;
+      }
+    }
+    if(matchingIndex){
+      // ROW EXISTS, DELETE IT
+      // Replace existing row in globalWeightArray
+      globalWeightArray.splice(matchingIndex,1);
+    } else {
+      // ROW DOES NOT EXIST, THROW AN ERROR
+      // Add row to globalWeightArray
+      console.log("Row didn't exist for it to be deleted.")
+    }
     // Recalculate the smoothed weight
     calculateSmoothedWeight();
   },
@@ -323,17 +331,14 @@ function initChart(weights) {
 
 }
 
-function transpose(a) {
-  return Object.keys(a[0]).map(
-    function (c) { return a.map(function (r) { return r[c]; }); }
-    );
-  }
-
+// Define the sort order
 function Comparator(a,b) {
   if (a[1] < b[1]) return -1;
   if (a[1] > b[1]) return 1;
   return 0;
 }
+
+
 </script>
 </body>
 </html>
