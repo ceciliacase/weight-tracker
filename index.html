@@ -8,12 +8,10 @@
 <link rel="stylesheet" type="text/css" href="{{url_for('static',filename='css/style.css')}}">
 <link rel="stylesheet" type="text/css" href="{{url_for('static',filename='css/dropzone.css')}}">
 <link rel="stylesheet" type="text/css" href="{{url_for('static',filename='css/inline-edit.css')}}">
-<!--<link rel="stylesheet" type="text/css" href="{{url_for('static',filename='c3-master/c3.css')}}">-->
 <link rel="stylesheet" type="text/css" href="{{url_for('static',filename='css/chart.css')}}">
 
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js" charset='utf-8'></script>
-<!--<script src="{{url_for('static',filename='c3-master/c3.js')}}"></script>-->
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
 <script src="https://cdn.datatables.net/1.10.7/js/jquery.dataTables.min.js"></script>
 <script src="{{url_for('static',filename='js/dropzone.js')}}"></script>
@@ -32,38 +30,44 @@ NEW HEADER
 
 <section id="main">
 <div id="chart"></div>
-  <section id="sidebar">
-  <section id="addweight">
-    <h2>Add your weight:</h2>
-    Date:
-    <input type='date' id='newDate' value={{currentdate}}>
-    Weight:
-    <input type='number' id='newWeight' value={{latestweight.0}}>
-    <button id='addWeightButton' value='Add Weight'>Add</button>
-  </section>
 
-  <section id="weightlist">
-    <table id='weighttable' class="display">
-    <thead>
-    <tr>
-      <th></th>
-      <th>Date</th>
-      <th></th>
-      <th>Weight</th>
-      <th>Smoothed</th>
-      <th></th>
-    </tr>
-    </thead>
-    </table>
-  </section>
-  <section id="uploadform">
-    <form id="csv-dropzone" action="/upload" class="dropzone"></form>
-  </section>
-  </section>
+<section id="sidebar">
+
+<section id="addweight">
+  <h2>Add your weight:</h2>
+  Date:
+  <input type='date' id='newDate' value={{currentdate}}>
+  Weight:
+  <input type='number' id='newWeight' value={{latestweight.0}}>
+  <button id='addWeightButton' value='Add Weight'>Add</button>
+</section>
+
+<section id="weightlist">
+  <table id='weighttable' class="display">
+  <thead>
+  <tr>
+    <th></th>
+    <th>Date</th>
+    <th></th>
+    <th>Weight</th>
+    <th>Smoothed</th>
+    <th></th>
+  </tr>
+  </thead>
+  </table>
+</section>
+
+<section id="uploadform">
+  <form id="csv-dropzone" action="/upload" class="dropzone"></form>
+</section>
+</section>
 </section>
 <script>
 // Global array to hold the master weight information. I hate doing this...
 var globalWeightArray = [];
+
+// *******************************************************
+// TABLE AND DATATABLE FUNCTIONS
 
 // Configure dropzone
 // Upload file to server
@@ -94,15 +98,6 @@ Dropzone.options.csvDropzone = {
   }
 };
 
-
-// When an input field in the table has focus, make the save button appear
-// TODO: Make sure last value is put back in the field if they cancel out of the field
-$('body').on('focus', 'tr', function(){
-  $(this).children(":last").children(".saveRowButton").css('visibility','visible');
-  }).on('blur', 'tr', function(){
-  $(this).children(":last").children(".saveRowButton").css('visibility','hidden');
-});
-
 // Fill the initial table with the weight information
 $.ajax({url:'/weights',
   type:'GET',
@@ -114,7 +109,7 @@ $.ajax({url:'/weights',
     addWeightTable();
 
     // Create chart
-    // initChart(calcedweighttable);
+    initializeChart();
   }
 });
 
@@ -232,19 +227,29 @@ function addWeightTable() {
     "emptyTable": "You haven't started tracking your weight. Enter today's weigh-in above!"
   },
   "columnDefs": [{
+    // ID hidden
     "targets": [0],
     "visible": false,
     "searchable": false
   },{
+    //Submitted Date hidden
     "targets": [2],
     "visible": false,
     "searchable": false
   },{
+    // Weight data in an input field
     "targets":[3],
     "render": function (data, type, row) {
-    return "<input type='number' class='inline-edit weight' value='" + data + "'>";
+      return data.toFixed(1);
     }
   },{
+    // Smoothed weight data, rounded to one decimal
+    "targets":[4],
+    "render": function (data, type, row) {
+      return "<input type='number' class='inline-edit weight' value='" + data.toFixed(1) + "'>";
+    }
+  },{
+    // Button row
     "targets": -1,
     "data": null,
     "defaultContent": "<button class='saveRowButton'>Save</button><button class='deleteRowButton'>Delete</button>"
@@ -256,39 +261,40 @@ function addWeightTable() {
 function initializeWeightArray(weights) {
   // load global array with the data from the server
   globalWeightArray = weights;
-  // Expand all rows to have the correct amount of cols for the smoothed data
+  // Insert row for the smoothed data
   var cols=5;
   for (var i = 0; i < globalWeightArray.length; i++)
   {
     for (var j =  globalWeightArray[i].length; j < cols; j++)
     {
-      globalWeightArray[i].push(null);
+      globalWeightArray[i].splice(3,0,null);
     }
   }
   calculateSmoothedWeight();
+  // console.log(globalWeightArray);
   return globalWeightArray;
 }
 
 // Sort the global array and calculate the smoothed weights
 function calculateSmoothedWeight() {
-  //id,date,datesub,weight,smoothedweight
+  //id,date,datesub,smoothedweight,weight
   // Check the array exists
   if (globalWeightArray.length){
     globalWeightArray = globalWeightArray.sort(Comparator);
   
     // console.log(globalWeightArray);
-    var previoussmoothedweight = globalWeightArray[0][3];
-    var currentweight = globalWeightArray[0][3];
+    var previoussmoothedweight = globalWeightArray[0][4]; // Set first smoothed weight to the first entered weight
+    var currentweight = globalWeightArray[0][4];
     var smoothedweight;
     var EXPRATE = 0.1;
     var arrayLength = globalWeightArray.length;
   
     //TODO: Replace this for loop with map
     for (var i = 0; i < arrayLength; i++) {
-      currentweight = globalWeightArray[i][3];
+      currentweight = globalWeightArray[i][4];
       smoothedweight = previoussmoothedweight+(EXPRATE*(currentweight-previoussmoothedweight));
       previoussmoothedweight = smoothedweight;
-      globalWeightArray[i][4] = smoothedweight;
+      globalWeightArray[i][3] = smoothedweight;
     }
   }
 }
@@ -307,12 +313,13 @@ function insertRow(data) {
   if(matchingIndex){
     // ROW EXISTS, UPDATE IT
     // Replace existing row in globalWeightArray
-    globalWeightArray.splice(matchingIndex,1,[data.Id,data.wDate,data.DateSub,data.Weight,null]);
+    globalWeightArray.splice(matchingIndex,1,[data.Id,data.wDate,data.DateSub,null,data.Weight]);
   } else {
     // ROW DOES NOT EXIST, ADD NEW ROW
     // Add row to globalWeightArray
-    globalWeightArray.push([data.Id,data.wDate,data.DateSub,data.Weight,null]);
+    globalWeightArray.push([data.Id,data.wDate,data.DateSub,null,data.Weight]);
   }
+  console.log(globalWeightArray);
   // Sort array and recalculate the smoothed weight
   calculateSmoothedWeight();
   // Redraw the DataTable with the new data
@@ -327,9 +334,104 @@ function insertRow(data) {
 }
 
 
-function initChart(weights) {
 
+// *******************************************************
+// TODO: Make chart scale with window
+function initializeChart() {
+  var margin = {top: 20, right: 20, bottom: 30, left: 50},
+    width = $("#chart").width() - margin.left - margin.right,
+    height = $("#chart").height() - margin.top - margin.bottom;
+
+  var parseDate = d3.time.format("%Y-%m-%d").parse;
+
+  var x = d3.time.scale()
+    .range([0, width]);
+
+  var y = d3.scale.linear()
+    .range([height, 0]);
+
+  var xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom");
+
+  var yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left");
+
+  var weightLine = d3.svg.line()
+    .x(function(d) { return x(d.date); })
+    .y(function(d) { return y(d.weight); });
+
+  var smweightLine = d3.svg.line()
+    .x(function(d) { return x(d.date); })
+    .y(function(d) { return y(d.smweight); });
+
+  var svg = d3.select("#chart")
+    .append("svg")
+    .attr("width", $("#chart").width())
+    .attr("height", $("#chart").height())
+    .attr("id", "weightchart")
+    .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+  
+    var data = globalWeightArray.map(function(d) {
+      return {
+        date: parseDate(d[1]),
+        weight: d[3],
+        smweight: d[4]
+      };
+    });
+
+  // console.log(data);
+  // console.log(globalWeightArray);
+
+  x.domain(d3.extent(data, function(d) { return d.date; }));
+  y.domain(d3.extent(data, function(d) { return d.weight; }));
+
+  svg.append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + height + ")")
+    .call(xAxis);
+
+  svg.append("g")
+    .attr("class", "y axis")
+    .call(yAxis)
+    .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", ".71em")
+      .style("text-anchor", "end")
+      .text("Weight (lbs)");
+
+  svg.append("path")
+    .datum(data)
+    .attr("class", "line")
+    .attr("id", "weight")
+    .attr("d", smweightLine);
+  svg.append("path")
+    .datum(data)
+    .attr("class", "line")
+    .attr("id","smoothedweight")
+    .attr("d", weightLine);
 }
+
+// Update the graph when the window is resized
+function updateWindow() {
+  console.log("window resized");
+  d3.select("#chart")
+    .attr("width",  $("#chart").width())
+    .attr("height",  $("#chart").height());
+}
+window.onresize = updateWindow();
+
+// MISC FUNCTIONS
+// When an input field in the table has focus, make the save button appear
+// TODO: Make sure last value is put back in the field if they cancel out of the field
+$('body').on('focus', 'tr', function(){
+  $(this).children(":last").children(".saveRowButton").css('visibility','visible');
+  }).on('blur', 'tr', function(){
+  $(this).children(":last").children(".saveRowButton").css('visibility','hidden');
+});
 
 // Define the sort order
 function Comparator(a,b) {
@@ -338,6 +440,11 @@ function Comparator(a,b) {
   return 0;
 }
 
+function transpose(a) {
+  return Object.keys(a[0]).map(
+    function (c) { return a.map(function (r) { return r[c]; }); }
+    );
+  }
 
 </script>
 </body>

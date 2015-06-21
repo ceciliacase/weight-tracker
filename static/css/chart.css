@@ -1,9 +1,43 @@
-.c3-line-LowWeight,.c3-line-HighWeight {
-  stroke-width:0px;
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
 }
-.c3-line-Smoothed {
-  stroke-width:2px;
+
+.x.axis path {
+  display: none;
 }
-.c3-circles-Smoothed circle {
-  visibility:hidden !important;
+
+.line {
+  fill: none;
+  stroke: steelblue;
+  stroke-width: 1.5px;
+}
+
+/*.svg-container {*/
+/*    display: inline-block;*/
+/*    position: relative;*/
+/*    width: 100%;*/
+/*    padding-bottom: 100%; /* aspect ratio */
+/*    vertical-align: top;*/
+/*    overflow: hidden;*/
+/*}*/
+/*.svg-content-responsive {*/
+/*    display: inline-block;*/
+/*    position: absolute;*/
+/*    top: 10px;*/
+/*    left: 0;*/
+/*}*/
+
+#weightchart {
+  background-color:grey;
+}
+
+#smoothedweight {
+  stroke: red;
+}
+
+#weight {
+  stroke: blue;
 }

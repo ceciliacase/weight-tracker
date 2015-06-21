@@ -52,7 +52,7 @@ nav {
 }
 #sidebar {
   abackground-color:yellow;
-  width:500px;
+  width:400px;
   flex: none;
   display:flex;
   flex-flow:column;
